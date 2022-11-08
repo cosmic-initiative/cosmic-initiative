@@ -76,12 +76,35 @@ where
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, strum_macros::Display)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Variant {
     Native(Native),
     Artifact(Artifact),
-    Db(Db),
     Star(StarVariant),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum Sub {
+    Artifact(ArtifactSub),
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    Eq,
+    PartialEq,
+    Hash,
+    strum_macros::Display,
+    strum_macros::EnumString,
+)]
+pub enum ArtifactSub {
+    Repo,
+    Series,
+    Bundle,
+    Dir,
+    File,
 }
 
 impl Variant {
@@ -124,11 +147,7 @@ pub enum Native {
     strum_macros::EnumString,
 )]
 pub enum Artifact {
-    Repo,
-    Bundle,
-    Series,
-    Dir,
-    File,
+    Disk,
 }
 
 #[derive(
@@ -302,7 +321,139 @@ pub type KindSubTypes = SubTypeDef<Kind, Option<CamelCase>>;
 pub type KindFull = KindDef<KindSubTypes, Option<VariantFull>>;
 pub type ProtoKind = KindDef<CamelCaseSubTypes, Option<ProtoVariant>>;
 
+impl ProtoKind {
+    pub fn to_full(&self) -> Result<KindFull, SpaceErr> {
+        let kind: Kind = Kind::from_str(self.parent.part.as_str())?;
+        match kind {
+            Kind::Artifact => {
+                let sub =
+                    self.parent.sub.as_ref().ok_or::<SpaceErr>(
+                        "Artifact expecting Sub kind:  <Artifact:File>".into(),
+                    )?;
+                let sub: ArtifactSub = ArtifactSub::from_str(sub.as_str())?;
+                match &sub {
+                    ArtifactSub::Repo => {
+                        if let Some(variant) = self.child.as_ref() {
+                            Ok(KindFull {
+                                parent: SubTypeDef {
+                                    part: Kind::Artifact,
+                                    sub: Some(CamelCase::from_str("Repo")?),
+                                    r#type: None,
+                                },
+                                child: Some(variant.to_full(&kind)?),
+                            })
+                        } else {
+                            Err(
+                                "Artifact SubKind Repo is required to have a Variant [Disk,S3]"
+                                    .into(),
+                            )
+                        }
+                    }
+                    _ => {
+                        if self.child.is_some() {
+                            Err(format!(
+                                "Artifact SubKind {} does not have any Variants",
+                                sub.to_string()
+                            )
+                            .into())
+                        } else {
+                            Ok(KindFull {
+                                parent: SubTypeDef {
+                                    part: Kind::Artifact,
+                                    sub: Some(CamelCase::from_str(sub.to_string().as_str())?),
+                                    r#type: None,
+                                },
+                                child: None,
+                            })
+                        }
+                    }
+                }
+            }
+            Kind::Star => {
+                let star = self
+                    .child
+                    .as_ref()
+                    .ok_or("Star Kind expected to have a StarVariant")?;
+                Ok(KindFull {
+                    child: Some(star.to_full(&kind)?),
+                    parent: SubTypeDef {
+                        part: kind,
+                        sub: None,
+                        r#type: None,
+                    },
+                })
+            }
+            Kind::Native => {
+                let native = self
+                    .child
+                    .as_ref()
+                    .ok_or("Native Kind expected to have a Native variant")?;
+                Ok(KindFull {
+                    child: Some(native.to_full(&kind)?),
+                    parent: SubTypeDef {
+                        part: kind,
+                        sub: None,
+                        r#type: None,
+                    },
+                })
+            }
+            kind => Ok(KindFull {
+                parent: SubTypeDef {
+                    part: kind,
+                    sub: None,
+                    r#type: None,
+                },
+                child: None,
+            }),
+        }
+    }
+}
 
+impl ProtoVariant {
+    pub fn to_full(&self, kind: &Kind) -> Result<VariantFull, SpaceErr> {
+        let mut variant = match kind {
+            Kind::Artifact => {
+                let artifact: Artifact = Artifact::from_str(self.parent.part.as_str())?;
+
+                VariantFull {
+                    parent: SubTypeDef {
+                        part: Variant::Artifact(artifact),
+                        sub: None,
+                        r#type: None,
+                    },
+                    child: None,
+                }
+            }
+            Kind::Star => {
+                let star: StarVariant = StarVariant::from_str(self.parent.part.as_str())?;
+
+                VariantFull {
+                    parent: SubTypeDef {
+                        part: Variant::Star(star),
+                        sub: None,
+                        r#type: None,
+                    },
+                    child: None,
+                }
+            }
+            Kind::Native => {
+                let native: Native = Native::from_str(self.parent.part.as_str())?;
+                VariantFull {
+                    parent: SubTypeDef {
+                        part: Variant::Native(native),
+                        sub: None,
+                        r#type: None,
+                    },
+                    child: None,
+                }
+            }
+            kind => {
+                return Err(format!("{} does not have a variant", kind.to_string()).into());
+            }
+        };
+        Ok(variant)
+    }
+}
 
 pub type ParentMatcherDef<Matcher, Child, SubTypeMatcher> =
     ParentChildDef<SubTypeDef<Matcher, SubTypeMatcher>, Child>;
@@ -421,7 +572,11 @@ pub type KindFullSelector =
 
 pub mod parse {
 
-    use crate::kind2::{CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef, Pattern, ProtoKind, ProtoVariant, Specific, SpecificDef, SpecificFullSelector, SpecificSelector, SpecificSubTypes, SpecificSubTypesSelector, SubTypeDef, VariantDef};
+    use crate::kind2::{
+        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef, Pattern,
+        ProtoKind, ProtoVariant, Specific, SpecificDef, SpecificFullSelector, SpecificSelector,
+        SpecificSubTypes, SpecificSubTypesSelector, SubTypeDef, VariantDef,
+    };
     use crate::parse::{camel_case, domain, skewer_case, version, version_req, CamelCase, Domain};
     use cosmic_nom::{Res, Span};
     use nom::branch::alt;
@@ -616,7 +771,6 @@ pub mod parse {
         move |input: I| parent_child_def(fn_kind, fn_variant)(input)
     }
 
-
     pub fn camel_case_sub_types<I>(input: I) -> Res<I, CamelCaseSubTypes>
     where
         I: Span,
@@ -653,13 +807,16 @@ pub mod parse {
     where
         I: Span,
     {
-        kind_def(camel_case_sub_types,  |i| opt(child(proto_variant))(i) )(input)
+        kind_def(camel_case_sub_types, |i| opt(child(proto_variant))(i))(input)
     }
-
 
     #[cfg(test)]
     pub mod test {
-        use crate::kind2::parse::{camel_case_sub_types, camel_case_sub_types_selector, opt_pattern, pattern, preceded_opt_pattern, proto_kind, proto_variant, specific, specific_full_selector, specific_selector, specific_sub_types};
+        use crate::kind2::parse::{
+            camel_case_sub_types, camel_case_sub_types_selector, opt_pattern, pattern,
+            preceded_opt_pattern, proto_kind, proto_variant, specific, specific_full_selector,
+            specific_selector, specific_sub_types,
+        };
         use crate::kind2::{IsMatch, OptPattern, Pattern};
 
         use crate::parse::error::result;
@@ -796,9 +953,8 @@ pub mod parse {
             assert!(variant.parent.sub.is_some());
         }
 
-
-      #[test]
-      pub fn test_proto_kind() {
+        #[test]
+        pub fn test_proto_kind() {
             let kind = log(result(proto_kind(new_span("Root")))).unwrap();
 
             let kind = log(result(proto_kind(new_span("Db:Sub")))).unwrap();
@@ -806,10 +962,7 @@ pub mod parse {
 
             let kind = log(result(proto_kind(new_span("Db<Variant>")))).unwrap();
             assert!(kind.child.is_some());
-
-      }
-
-
+        }
 
         #[test]
         pub fn test_camel_case_subtypes_err() {
@@ -848,7 +1001,7 @@ pub mod test {
     }
 
     fn create_variant_full() -> VariantFull {
-        Variant::Artifact(Artifact::Bundle).with_specific(Some(create_specific_sub_type()))
+        Variant::Artifact(Artifact::Disk).with_specific(Some(create_specific_sub_type()))
     }
 
     #[test]
@@ -865,9 +1018,9 @@ pub mod test {
     #[test]
     pub fn variant() {
         let var1 =
-            Variant::Artifact(Artifact::Bundle).with_specific(Some(create_specific_sub_type()));
+            Variant::Artifact(Artifact::Disk).with_specific(Some(create_specific_sub_type()));
         let var2 =
-            Variant::Artifact(Artifact::Bundle).with_specific(Some(create_specific_sub_type()));
+            Variant::Artifact(Artifact::Disk).with_specific(Some(create_specific_sub_type()));
         assert_eq!(var1, var2);
     }
 
@@ -919,7 +1072,7 @@ pub mod test {
         let variant = create_variant_full();
         let mut selector = VariantFullSelector {
             parent: SubTypeDef {
-                part: Pattern::Matches(Variant::Artifact(Artifact::Bundle)),
+                part: Pattern::Matches(Variant::Artifact(Artifact::Disk)),
                 sub: OptPattern::None,
                 r#type: OptPattern::None,
             },
@@ -930,7 +1083,7 @@ pub mod test {
 
         let mut selector = VariantFullSelector {
             parent: SubTypeDef {
-                part: Pattern::Matches(Variant::Artifact(Artifact::Bundle)),
+                part: Pattern::Matches(Variant::Artifact(Artifact::Disk)),
                 sub: OptPattern::None,
                 r#type: OptPattern::None,
             },
