@@ -7,7 +7,7 @@ use serde::de::{Error, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, Trace};
-use specific::{ProductSelector, ProviderSelector, VariantSelector, VendorSelector};
+use specific::{ProductSelector, ProviderSelector, ProductVariantSelector, VendorSelector};
 
 use crate::kind::{BaseKind, Kind, KindParts, Specific};
 use crate::loc::{
@@ -527,7 +527,7 @@ pub type SpecificSelector = SpecificSelectorDef<
     ProviderSelector,
     VendorSelector,
     ProductSelector,
-    VariantSelector,
+    ProductVariantSelector,
     VersionReq,
 >;
 
@@ -615,7 +615,7 @@ pub mod specific {
     pub type ProviderSelector = Pattern<Domain>;
     pub type VendorSelector = Pattern<Domain>;
     pub type ProductSelector = Pattern<SkewerCase>;
-    pub type VariantSelector = Pattern<SkewerCase>;
+    pub type ProductVariantSelector = Pattern<SkewerCase>;
     pub type VersionPattern = Pattern<VersionReq>;
 }
 

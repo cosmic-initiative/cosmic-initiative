@@ -50,7 +50,7 @@ use cosmic_space::security::{
     PermissionsMask, PermissionsMaskKind, Privilege, Privileges,
 };
 use cosmic_space::selector::specific::{
-    ProductSelector, ProviderSelector, VariantSelector, VendorSelector,
+    ProductSelector, ProviderSelector, ProductVariantSelector, VendorSelector,
 };
 use cosmic_space::selector::{
     ExactPointSeg, KindBaseSelector, PointHierarchy, PointKindSeg, PointSegSelector, Selector,
@@ -644,8 +644,8 @@ where
                         }
                     }
                     match &specific.variant {
-                        VariantSelector::Any => {}
-                        VariantSelector::Exact(variant) => {
+                        ProductVariantSelector::Any => {}
+                        ProductVariantSelector::Exact(variant) => {
                             index = index + 1;
                             where_clause.push_str(format!(" AND variant=${}", index).as_str());
                             params.push(variant.to_string());

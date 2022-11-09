@@ -84,7 +84,7 @@ use crate::security::{
     AccessGrantKind, AccessGrantKindDef, ChildPerms, ParticlePerms, Permissions, PermissionsMask,
     PermissionsMaskKind, Privilege,
 };
-use crate::selector::specific::{ProductSelector, VariantSelector, VendorSelector};
+use crate::selector::specific::{ProductSelector, ProductVariantSelector, VendorSelector};
 use crate::selector::{
     ExactPointSeg, Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef, MapEntryPattern,
     MapEntryPatternCtx, MapEntryPatternVar, Pattern, PatternBlock, PatternBlockCtx,

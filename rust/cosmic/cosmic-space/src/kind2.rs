@@ -306,6 +306,7 @@ impl Specific {
     }
 }
 pub type VariantSubTypes = SubTypeDef<Variant, Option<CamelCase>>;
+pub type VariantFullSubTypesSelector = SubTypeDef<Pattern<Variant>, Pattern<SpecificFullSelector>>;
 
 pub type SpecificSubTypes = SubTypeDef<Specific, Option<CamelCase>>;
 pub type SpecificSubTypesSelector = SubTypeDef<Pattern<SpecificSelector>, OptPattern<CamelCase>>;
@@ -313,13 +314,13 @@ pub type SpecificSubTypesSelector = SubTypeDef<Pattern<SpecificSelector>, OptPat
 pub type VariantDef<Variant, Specific> = ParentChildDef<Variant, Specific>;
 pub type VariantFull = VariantDef<VariantSubTypes, Option<SpecificSubTypes>>;
 pub type ProtoVariant = VariantDef<CamelCaseSubTypes, Option<SpecificSubTypes>>;
-pub type ProtoVariantSelector = VariantDef<CamelCaseSubTypes, SpecificSelector>;
 pub type KindDef<Kind, Variant> = ParentChildDef<Kind, Variant>;
 pub type CamelCaseSubTypes = SubTypeDef<CamelCase, Option<CamelCase>>;
 pub type CamelCaseSubTypesSelector = SubTypeDef<Pattern<CamelCase>, OptPattern<CamelCase>>;
 pub type KindSubTypes = SubTypeDef<Kind, Option<CamelCase>>;
 pub type KindFull = KindDef<KindSubTypes, Option<VariantFull>>;
 pub type ProtoKind = KindDef<CamelCaseSubTypes, Option<ProtoVariant>>;
+pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindSelector>, OptPattern<CamelCase>>;
 
 impl ProtoKind {
     pub fn to_full(&self) -> Result<KindFull, SpaceErr> {
@@ -564,24 +565,32 @@ impl IsMatch<Specific> for SpecificSelector {
             && self.variant.is_match(&other.variant)
     }
 }
+pub type VariantSelector =
+    VariantDef<Pattern<CamelCaseSubTypesSelector>, OptPattern<SpecificSelector>>;
+
+pub type KindSelector = KindDef<Pattern<CamelCaseSubTypesSelector>, OptPattern<VariantSelector>>;
 
 pub type VariantFullSelector =
-    ParentMatcherDef<Pattern<Variant>, OptPattern<SpecificSubTypes>, OptPattern<CamelCase>>;
+    VariantDef<Pattern<VariantFullSubTypesSelector>, OptPattern<SpecificSelector>>;
+
+
 pub type KindFullSelector =
-    ParentMatcherDef<Pattern<Kind>, OptPattern<VariantFullSelector>, OptPattern<CamelCase>>;
+    KindDef<Pattern<KindFullSubTypesSelector>, OptPattern<VariantFullSelector>>;
 
 pub mod parse {
 
     use crate::kind2::{
-        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef, Pattern,
-        ProtoKind, ProtoVariant, Specific, SpecificDef, SpecificFullSelector, SpecificSelector,
-        SpecificSubTypes, SpecificSubTypesSelector, SubTypeDef, VariantDef,
+        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, KindSelector, OptPattern,
+        ParentChildDef, Pattern, ProtoKind, ProtoVariant, Specific, SpecificDef,
+        SpecificFullSelector, SpecificSelector, SpecificSubTypes, SpecificSubTypesSelector,
+        SubTypeDef, VariantDef, VariantFullSelector, VariantSelector,
     };
     use crate::parse::{camel_case, domain, skewer_case, version, version_req, CamelCase, Domain};
+    use crate::selector::specific::ProductVariantSelector;
     use cosmic_nom::{Res, Span};
     use nom::branch::alt;
     use nom::bytes::complete::tag;
-    use nom::combinator::{fail, opt, success, value};
+    use nom::combinator::{eof, fail, opt, success, value};
     use nom::sequence::{delimited, pair, preceded, tuple};
     use std::str::FromStr;
 
@@ -610,6 +619,7 @@ pub mod parse {
             alt((
                 value(OptPattern::Any, tag("*")),
                 value(OptPattern::None, tag("!")),
+                value(OptPattern::None, eof),
                 |i| f(i).map(|(next, x)| (next, OptPattern::Matches(x))),
             ))(input)
         }
@@ -727,6 +737,58 @@ pub mod parse {
         )(input)
     }
 
+    pub fn variant_selector<I>(input: I) -> Res<I, VariantSelector>
+    where
+        I: Span,
+    {
+        variant_def(pattern(camel_case_sub_types_selector), |i| {
+            opt(child(pattern(specific_selector)))(i)
+        })(input)
+        .map(|(next, variant)| {
+            let child = match &variant.child {
+                None => OptPattern::None,
+                Some(some) => match some {
+                    Pattern::None => OptPattern::None,
+                    Pattern::Any => OptPattern::Any,
+                    Pattern::Matches(m) => OptPattern::Matches(m.clone()),
+                },
+            };
+            (
+                next,
+                VariantSelector {
+                    parent: variant.parent,
+                    child,
+                },
+            )
+        })
+    }
+
+        pub fn kind_selector<I>(input: I) -> Res<I, KindSelector>
+    where
+        I: Span,
+    {
+        variant_def(pattern(camel_case_sub_types_selector), |i| {
+            opt(child(pattern(variant_selector)))(i)
+        })(input)
+        .map(|(next, kind)| {
+            let child = match &kind.child {
+                None => OptPattern::None,
+                Some(some) => match some {
+                    Pattern::None => OptPattern::None,
+                    Pattern::Any => OptPattern::Any,
+                    Pattern::Matches(m) => OptPattern::Matches(m.clone()),
+                },
+            };
+            (
+                next,
+                KindSelector{
+                    parent: kind.parent,
+                    child,
+                },
+            )
+        })
+    }
+
     pub fn specific_sub_types_selector<I>(input: I) -> Res<I, SpecificSubTypesSelector>
     where
         I: Span,
@@ -813,9 +875,9 @@ pub mod parse {
     #[cfg(test)]
     pub mod test {
         use crate::kind2::parse::{
-            camel_case_sub_types, camel_case_sub_types_selector, opt_pattern, pattern,
-            preceded_opt_pattern, proto_kind, proto_variant, specific, specific_full_selector,
-            specific_selector, specific_sub_types,
+            camel_case_sub_types, camel_case_sub_types_selector, kind_selector, opt_pattern,
+            pattern, preceded_opt_pattern, proto_kind, proto_variant, specific,
+            specific_full_selector, specific_selector, specific_sub_types, variant_selector,
         };
         use crate::kind2::{IsMatch, OptPattern, Pattern};
 
@@ -957,11 +1019,32 @@ pub mod parse {
         pub fn test_proto_kind() {
             let kind = log(result(proto_kind(new_span("Root")))).unwrap();
 
-            let kind = log(result(proto_kind(new_span("Db:Sub")))).unwrap();
-            assert!(kind.parent.sub.is_some());
+            // Repo takes a Variant
+            let kind = log(result(proto_kind(new_span("Artifact:Repo<Disk>")))).unwrap();
+            assert!(kind.to_full().is_ok());
+
+            // File does not take a Disk Variant
+            let kind = log(result(proto_kind(new_span("Artifact:File<Disk>")))).unwrap();
+            assert!(kind.to_full().is_err());
+
+            let kind = log(result(proto_kind(new_span("Artifact:File")))).unwrap();
+            assert!(kind.to_full().is_ok());
 
             let kind = log(result(proto_kind(new_span("Db<Variant>")))).unwrap();
             assert!(kind.child.is_some());
+        }
+        #[test]
+        pub fn test_variant_selector() {
+            let variant = log(result(variant_selector(new_span("Variant")))).unwrap();
+            let variant = log(result(variant_selector(new_span("Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>")))).unwrap();
+            let variant = log(result(variant_selector(new_span("Variant<*>")))).unwrap();
+        }
+
+        #[test]
+        pub fn test_kind_selector() {
+            let kind = log(result(kind_selector(new_span("Root")))).unwrap();
+            let kind = log(result(kind_selector(new_span("Root<Variant>>")))).unwrap();
+            let kind = log(result(kind_selector(new_span("Root<Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>>>")))).unwrap();
         }
 
         #[test]
@@ -1067,29 +1150,4 @@ pub mod test {
         assert!(selector.is_match(&specific));
     }
 
-    #[test]
-    pub fn variant_selector() {
-        let variant = create_variant_full();
-        let mut selector = VariantFullSelector {
-            parent: SubTypeDef {
-                part: Pattern::Matches(Variant::Artifact(Artifact::Disk)),
-                sub: OptPattern::None,
-                r#type: OptPattern::None,
-            },
-            child: OptPattern::None,
-        };
-
-        assert!(!selector.is_match(&variant));
-
-        let mut selector = VariantFullSelector {
-            parent: SubTypeDef {
-                part: Pattern::Matches(Variant::Artifact(Artifact::Disk)),
-                sub: OptPattern::None,
-                r#type: OptPattern::None,
-            },
-            child: OptPattern::Any,
-        };
-
-        assert!(selector.is_match(&variant));
-    }
 }
