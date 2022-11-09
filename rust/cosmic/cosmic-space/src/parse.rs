@@ -402,7 +402,7 @@ where
 }
 
 fn var<I: Span, O>(input: I) -> Res<I, VarVal<O>> {
-    tw(delimited(tag("${"), skewer_case, tag("}")))(input)
+    tw(|i| delimited(tag("${"), skewer_case, tag("}"))(i))(input)
         .map(|(next, var)| (next, VarVal::Var(var)))
 }
 

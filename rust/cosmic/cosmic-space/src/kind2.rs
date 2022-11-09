@@ -2,6 +2,7 @@ use crate::err::SpaceErr;
 use crate::loc::Version;
 use crate::parse::{CamelCase, Domain, SkewerCase};
 use crate::selector::VersionReq;
+use cosmic_nom::Tw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -566,13 +567,13 @@ impl IsMatch<Specific> for SpecificSelector {
     }
 }
 pub type VariantSelector =
-    VariantDef<Pattern<CamelCaseSubTypesSelector>, OptPattern<SpecificSelector>>;
+    VariantDef<Tw<Pattern<CamelCaseSubTypesSelector>>, Tw<OptPattern<SpecificSelector>>>;
 
-pub type KindSelector = KindDef<Pattern<CamelCaseSubTypesSelector>, OptPattern<VariantSelector>>;
+pub type KindSelector =
+    KindDef<Tw<Pattern<CamelCaseSubTypesSelector>>, Tw<OptPattern<VariantSelector>>>;
 
 pub type VariantFullSelector =
     VariantDef<Pattern<VariantFullSubTypesSelector>, OptPattern<SpecificSelector>>;
-
 
 pub type KindFullSelector =
     KindDef<Pattern<KindFullSubTypesSelector>, OptPattern<VariantFullSelector>>;
@@ -587,7 +588,7 @@ pub mod parse {
     };
     use crate::parse::{camel_case, domain, skewer_case, version, version_req, CamelCase, Domain};
     use crate::selector::specific::ProductVariantSelector;
-    use cosmic_nom::{Res, Span};
+    use cosmic_nom::{tw, Res, Span};
     use nom::branch::alt;
     use nom::bytes::complete::tag;
     use nom::combinator::{eof, fail, opt, success, value};
@@ -741,53 +742,62 @@ pub mod parse {
     where
         I: Span,
     {
-        variant_def(pattern(camel_case_sub_types_selector), |i| {
-            opt(child(pattern(specific_selector)))(i)
-        })(input)
+        variant_def(
+            |i| tw(pattern(camel_case_sub_types_selector))(i),
+            |i| tw(|i|opt(child(pattern(specific_selector)))(i))(i),
+        )(input)
         .map(|(next, variant)| {
-            let child = match &variant.child {
+            let child = match &variant.child.w {
                 None => OptPattern::None,
-                Some(some) => match some {
-                    Pattern::None => OptPattern::None,
-                    Pattern::Any => OptPattern::Any,
-                    Pattern::Matches(m) => OptPattern::Matches(m.clone()),
-                },
+                Some(p) => {
+                    match p {
+                        Pattern::None => OptPattern::None,
+                        Pattern::Any => OptPattern::Any,
+                        Pattern::Matches(c) => OptPattern::Matches(c.clone())
+                    }
+                }
             };
+
             (
                 next,
                 VariantSelector {
                     parent: variant.parent,
-                    child,
+                    child: variant.child.replace(child),
                 },
             )
         })
     }
 
-        pub fn kind_selector<I>(input: I) -> Res<I, KindSelector>
-    where
-        I: Span,
+    pub fn kind_selector<I>(input: I) -> Res<I, KindSelector>
+        where
+            I: Span,
     {
-        variant_def(pattern(camel_case_sub_types_selector), |i| {
-            opt(child(pattern(variant_selector)))(i)
-        })(input)
-        .map(|(next, kind)| {
-            let child = match &kind.child {
-                None => OptPattern::None,
-                Some(some) => match some {
-                    Pattern::None => OptPattern::None,
-                    Pattern::Any => OptPattern::Any,
-                    Pattern::Matches(m) => OptPattern::Matches(m.clone()),
-                },
-            };
-            (
-                next,
-                KindSelector{
-                    parent: kind.parent,
-                    child,
-                },
-            )
-        })
+        variant_def(
+            |i| tw(pattern(camel_case_sub_types_selector))(i),
+            |i| tw(|i|opt(child(pattern(variant_selector)))(i))(i),
+        )(input)
+            .map(|(next, kind)| {
+                let child = match &kind.child.w {
+                    None => OptPattern::None,
+                    Some(p) => {
+                        match p {
+                            Pattern::None => OptPattern::None,
+                            Pattern::Any => OptPattern::Any,
+                            Pattern::Matches(c) => OptPattern::Matches(c.clone())
+                        }
+                    }
+                };
+
+                (
+                    next,
+                    KindSelector {
+                        parent: kind.parent,
+                        child: kind.child.replace(child),
+                    },
+                )
+            })
     }
+
 
     pub fn specific_sub_types_selector<I>(input: I) -> Res<I, SpecificSubTypesSelector>
     where
@@ -1036,7 +1046,10 @@ pub mod parse {
         #[test]
         pub fn test_variant_selector() {
             let variant = log(result(variant_selector(new_span("Variant")))).unwrap();
-            let variant = log(result(variant_selector(new_span("Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>")))).unwrap();
+            let variant = log(result(variant_selector(new_span(
+                "Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>",
+            ))))
+            .unwrap();
             let variant = log(result(variant_selector(new_span("Variant<*>")))).unwrap();
         }
 
@@ -1044,7 +1057,10 @@ pub mod parse {
         pub fn test_kind_selector() {
             let kind = log(result(kind_selector(new_span("Root")))).unwrap();
             let kind = log(result(kind_selector(new_span("Root<Variant>>")))).unwrap();
-            let kind = log(result(kind_selector(new_span("Root<Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>>>")))).unwrap();
+            let kind = log(result(kind_selector(new_span(
+                "Root<Variant<semyon.org:semyon.org:semyon:semyon:(1.0.0)>>>",
+            ))))
+            .unwrap();
         }
 
         #[test]
@@ -1149,5 +1165,4 @@ pub mod test {
 
         assert!(selector.is_match(&specific));
     }
-
 }

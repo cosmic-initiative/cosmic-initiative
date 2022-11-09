@@ -110,6 +110,13 @@ impl<W> Tw<W> {
     pub fn unwrap(self) -> W {
         self.w
     }
+
+    pub fn replace<N>(self, n : N ) -> Tw<N> {
+        Tw {
+            trace: self.trace,
+            w: n
+        }
+    }
 }
 
 impl<W> ToString for Tw<W>
@@ -132,7 +139,7 @@ impl<W> Deref for Tw<W> {
 pub fn tw<I, F, O>(mut f: F) -> impl FnMut(I) -> Res<I, Tw<O>>
 where
     I: Span,
-    F: FnMut(I) -> Res<I, O>,
+    F: FnMut(I) -> Res<I, O>+Copy,
 {
     move |input: I| {
         let (next, output) = f(input.clone())?;
