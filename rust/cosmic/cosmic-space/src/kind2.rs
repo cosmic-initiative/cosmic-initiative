@@ -1,3 +1,4 @@
+use crate::err::ParseErrs;
 use crate::err::SpaceErr;
 use crate::loc::Version;
 use crate::parse::{CamelCase, Domain, SkewerCase};
@@ -314,13 +315,13 @@ pub type SpecificSubTypesSelector = SubTypeDef<Pattern<SpecificSelector>, OptPat
 
 pub type VariantDef<Variant, Specific> = ParentChildDef<Variant, Specific>;
 pub type VariantFull = VariantDef<VariantSubTypes, Option<SpecificSubTypes>>;
-pub type ProtoVariant = VariantDef<CamelCaseSubTypes, Option<SpecificSubTypes>>;
+pub type ProtoVariant = VariantDef<Tw<CamelCaseSubTypes>, Tw<Option<SpecificSubTypes>>>;
 pub type KindDef<Kind, Variant> = ParentChildDef<Kind, Variant>;
 pub type CamelCaseSubTypes = SubTypeDef<CamelCase, Option<CamelCase>>;
 pub type CamelCaseSubTypesSelector = SubTypeDef<Pattern<CamelCase>, OptPattern<CamelCase>>;
 pub type KindSubTypes = SubTypeDef<Kind, Option<CamelCase>>;
 pub type KindFull = KindDef<KindSubTypes, Option<VariantFull>>;
-pub type ProtoKind = KindDef<CamelCaseSubTypes, Option<ProtoVariant>>;
+pub type ProtoKind = KindDef<Tw<CamelCaseSubTypes>, Tw<Option<ProtoVariant>>>;
 pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindSelector>, OptPattern<CamelCase>>;
 
 impl ProtoKind {
@@ -328,11 +329,22 @@ impl ProtoKind {
         let kind: Kind = Kind::from_str(self.parent.part.as_str())?;
         match kind {
             Kind::Artifact => {
-                let sub =
-                    self.parent.sub.as_ref().ok_or::<SpaceErr>(
-                        "Artifact expecting Sub kind:  <Artifact:File>".into(),
-                    )?;
-                let sub: ArtifactSub = ArtifactSub::from_str(sub.as_str())?;
+                let sub = self
+                    .parent
+                    .sub
+                    .as_ref()
+                    .ok_or::<SpaceErr>(ParseErrs::from_trace(
+                        "Artifact expecting Sub kind:  i.e. <Artifact:File>",
+                        "missing SubKind",
+                        &self.parent.trace,
+                    ))?;
+                let sub: ArtifactSub = ArtifactSub::from_str(sub.as_str()).map_err(|e| {
+                    ParseErrs::from_trace(
+                        "invalid artifact SubKind",
+                        "invalid artifact SubKind",
+                        &self.parent.trace,
+                    )
+                })?;
                 match &sub {
                     ArtifactSub::Repo => {
                         if let Some(variant) = self.child.as_ref() {
@@ -345,17 +357,21 @@ impl ProtoKind {
                                 child: Some(variant.to_full(&kind)?),
                             })
                         } else {
-                            Err(
-                                "Artifact SubKind Repo is required to have a Variant [Disk,S3]"
-                                    .into(),
+                            Err(ParseErrs::from_trace(
+                                "Artifact:Repo is required to have a Variant [Disk,S3]",
+                                "missing Variant",
+                                &self.parent.trace,
                             )
+                            .into())
                         }
                     }
                     _ => {
                         if self.child.is_some() {
-                            Err(format!(
-                                "Artifact SubKind {} does not have any Variants",
-                                sub.to_string()
+                            Err(ParseErrs::from_trace(
+                                format!("Artifact:{} does not have any Variants", sub.to_string())
+                                    .as_str(),
+                                "unexpected variant",
+                                &self.parent.trace,
                             )
                             .into())
                         } else {
@@ -372,10 +388,12 @@ impl ProtoKind {
                 }
             }
             Kind::Star => {
-                let star = self
-                    .child
-                    .as_ref()
-                    .ok_or("Star Kind expected to have a StarVariant")?;
+                let star = self.child.as_ref().ok_or(ParseErrs::from_trace(
+                    "Star Kind expected to have a StarVariant i.e. Star<Maelstrom>",
+                    "missing Variant ",
+                    &self.parent.trace,
+                ))?;
+
                 Ok(KindFull {
                     child: Some(star.to_full(&kind)?),
                     parent: SubTypeDef {
@@ -390,6 +408,13 @@ impl ProtoKind {
                     .child
                     .as_ref()
                     .ok_or("Native Kind expected to have a Native variant")?;
+
+                let star = self.child.as_ref().ok_or(ParseErrs::from_trace(
+                    "Native Kind expected to have a Native variant",
+                    "missing Variant ",
+                    &self.parent.trace,
+                ))?;
+
                 Ok(KindFull {
                     child: Some(native.to_full(&kind)?),
                     parent: SubTypeDef {
@@ -744,18 +769,16 @@ pub mod parse {
     {
         variant_def(
             |i| tw(pattern(camel_case_sub_types_selector))(i),
-            |i| tw(|i|opt(child(pattern(specific_selector)))(i))(i),
+            |i| tw(|i| opt(child(pattern(specific_selector)))(i))(i),
         )(input)
         .map(|(next, variant)| {
             let child = match &variant.child.w {
                 None => OptPattern::None,
-                Some(p) => {
-                    match p {
-                        Pattern::None => OptPattern::None,
-                        Pattern::Any => OptPattern::Any,
-                        Pattern::Matches(c) => OptPattern::Matches(c.clone())
-                    }
-                }
+                Some(p) => match p {
+                    Pattern::None => OptPattern::None,
+                    Pattern::Any => OptPattern::Any,
+                    Pattern::Matches(c) => OptPattern::Matches(c.clone()),
+                },
             };
 
             (
@@ -769,35 +792,32 @@ pub mod parse {
     }
 
     pub fn kind_selector<I>(input: I) -> Res<I, KindSelector>
-        where
-            I: Span,
+    where
+        I: Span,
     {
         variant_def(
             |i| tw(pattern(camel_case_sub_types_selector))(i),
-            |i| tw(|i|opt(child(pattern(variant_selector)))(i))(i),
+            |i| tw(|i| opt(child(pattern(variant_selector)))(i))(i),
         )(input)
-            .map(|(next, kind)| {
-                let child = match &kind.child.w {
-                    None => OptPattern::None,
-                    Some(p) => {
-                        match p {
-                            Pattern::None => OptPattern::None,
-                            Pattern::Any => OptPattern::Any,
-                            Pattern::Matches(c) => OptPattern::Matches(c.clone())
-                        }
-                    }
-                };
+        .map(|(next, kind)| {
+            let child = match &kind.child.w {
+                None => OptPattern::None,
+                Some(p) => match p {
+                    Pattern::None => OptPattern::None,
+                    Pattern::Any => OptPattern::Any,
+                    Pattern::Matches(c) => OptPattern::Matches(c.clone()),
+                },
+            };
 
-                (
-                    next,
-                    KindSelector {
-                        parent: kind.parent,
-                        child: kind.child.replace(child),
-                    },
-                )
-            })
+            (
+                next,
+                KindSelector {
+                    parent: kind.parent,
+                    child: kind.child.replace(child),
+                },
+            )
+        })
     }
-
 
     pub fn specific_sub_types_selector<I>(input: I) -> Res<I, SpecificSubTypesSelector>
     where
@@ -872,14 +892,20 @@ pub mod parse {
     where
         I: Span,
     {
-        variant_def(camel_case_sub_types, |i| opt(child(specific_sub_types))(i))(input)
+        variant_def(
+            |i| tw(camel_case_sub_types)(i),
+            |i| tw(|i| opt(child(specific_sub_types))(i))(i),
+        )(input)
     }
 
     pub fn proto_kind<I>(input: I) -> Res<I, ProtoKind>
     where
         I: Span,
     {
-        kind_def(camel_case_sub_types, |i| opt(child(proto_variant))(i))(input)
+        kind_def(
+            |i| tw(camel_case_sub_types)(i),
+            |i| tw(|i| opt(child(proto_variant))(i))(i),
+        )(input)
     }
 
     #[cfg(test)]
@@ -891,11 +917,13 @@ pub mod parse {
         };
         use crate::kind2::{IsMatch, OptPattern, Pattern};
 
+        use crate::err::SpaceErr;
         use crate::parse::error::result;
         use crate::parse::{
             camel_case, domain, expect, rec_version, skewer, version, version_req, CamelCase,
         };
         use crate::util::log;
+        use crate::util::test::verify;
         use core::str::FromStr;
         use cosmic_nom::new_span;
         use nom::bytes::complete::tag;
@@ -1032,16 +1060,25 @@ pub mod parse {
             // Repo takes a Variant
             let kind = log(result(proto_kind(new_span("Artifact:Repo<Disk>")))).unwrap();
             assert!(kind.to_full().is_ok());
+            kind.to_full().unwrap();
 
             // File does not take a Disk Variant
             let kind = log(result(proto_kind(new_span("Artifact:File<Disk>")))).unwrap();
-            assert!(kind.to_full().is_err());
+            let err: SpaceErr = log(kind.to_full()).unwrap_err();
+
+            verify("artifact_file_disk", &err);
 
             let kind = log(result(proto_kind(new_span("Artifact:File")))).unwrap();
             assert!(kind.to_full().is_ok());
 
-            let kind = log(result(proto_kind(new_span("Db<Variant>")))).unwrap();
+            let kind = log(result(proto_kind(new_span("NotExist<Variant>")))).unwrap();
+            let err: SpaceErr = log(kind.to_full()).unwrap_err();
+            verify("kind_not_exist", &err);
             assert!(kind.child.is_some());
+
+            let kind = log(result(proto_kind(new_span("Artifact")))).unwrap();
+            let err: SpaceErr = log(kind.to_full()).unwrap_err();
+            verify("require-sub-and-variant", &err);
         }
         #[test]
         pub fn test_variant_selector() {

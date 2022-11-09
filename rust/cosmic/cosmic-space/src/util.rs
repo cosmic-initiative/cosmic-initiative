@@ -228,3 +228,27 @@ pub fn log<R>(result: Result<R, SpaceErr>) -> Result<R, SpaceErr> {
         }
     }
 }
+
+#[cfg(test)]
+pub mod test {
+    use serde::Serialize;
+    use std::fs;
+    use std::path::Path;
+
+    pub fn verify<S>(name: &str, ser: &S)
+    where
+        S: Serialize,
+    {
+        let bin = bincode::serialize(&ser).unwrap();
+        fs::create_dir(Path::new("e2e"));
+        let file = format!("e2e/{}", name);
+        let path = Path::new(file.as_str());
+        if path.exists() == true {
+            if fs::read(path).unwrap() != bin {
+                assert!(false)
+            }
+        } else {
+            fs::write(path, bin).unwrap();
+        }
+    }
+}

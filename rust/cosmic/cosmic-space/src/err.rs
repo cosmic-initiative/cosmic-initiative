@@ -17,7 +17,7 @@ use tokio::sync::oneshot::error::RecvError;
 use tokio::time::error::Elapsed;
 
 use crate::err::report::{Label, Report, ReportKind};
-use cosmic_nom::Span;
+use cosmic_nom::{Span, Trace};
 use cosmic_nom::SpanExtra;
 
 use crate::parse::error::find_parse_err;
@@ -471,6 +471,8 @@ pub struct ParseErrs {
     pub ctx: String,
 }
 
+
+
 impl ParseErrs {
     pub fn ctx<S: ToString>(mut self, ctx: S) -> Self {
         Self {
@@ -512,6 +514,14 @@ impl ParseErrs {
             .with_label(Label::new(range).with_message(label))
             .finish();
         return ParseErrs::from_report(report, extra).into();
+    }
+
+    pub fn from_trace(
+        message: &str,
+        label: &str,
+        trace: &Trace
+    ) -> SpaceErr {
+        Self::from_range(message,label,trace.range.clone(), trace.extra.clone() )
     }
 
     pub fn from_owned_span<I: Span>(message: &str, label: &str, span: I) -> SpaceErr {
