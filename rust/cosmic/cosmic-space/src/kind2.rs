@@ -110,7 +110,7 @@ pub enum ArtifactSub {
 }
 
 impl Variant {
-    pub fn from(kind: &Kind, variant: &CamelCase) -> Result<Self, SpaceErr> {
+    pub fn from(kind: &KindCat, variant: &CamelCase) -> Result<Self, SpaceErr> {
         match kind {
             what => Err(format!(
                 "kind '{}' does not have a variant '{}' ",
@@ -217,7 +217,7 @@ impl Variant {
     strum_macros::Display,
     strum_macros::EnumString,
 )]
-pub enum Kind {
+pub enum KindCat {
     Root,
     Space,
     Base,
@@ -232,7 +232,7 @@ pub enum Kind {
     Native,
 }
 
-impl Kind {
+impl KindCat {
     pub fn to_sub_types(self) -> KindSubTypes {
         KindSubTypes {
             part: self,
@@ -241,15 +241,15 @@ impl Kind {
         }
     }
 
-    pub fn with_variant(self, variant: Option<VariantFull>) -> KindFull {
-        KindFull {
+    pub fn with_variant(self, variant: Option<VariantFull>) -> Kind {
+        Kind {
             parent: self.to_sub_types(),
             child: variant,
         }
     }
 }
 
-impl Default for Kind {
+impl Default for KindCat {
     fn default() -> Self {
         Self::Root
     }
@@ -264,6 +264,22 @@ pub struct SpecificDef<Domain, Skewer, Version> {
     pub version: Version,
 }
 
+/// A Specific is used to extend the Kind system in The Cosmic Initiative to a very exact level.
+/// when a Kind has a specific it is not only referencing something general like a Database,
+/// but the vendor, product and version of that database among other things.
+/// The Specific def looks like this `provider.url:vendor.url:product:variant:version`
+/// * **provider** - this is the domain name of the person or entity that provided the driver
+///                  that this specific defines
+/// * **vendor** - the vendor that provides the product which may have had nothing to do with
+///                creating the driver
+/// * **product** - the product
+/// * **variant** - many products have variation and here it is where it is specificied
+/// * **version** - this is a SemVer describing the exact version of the Specific
+///
+/// ## Example:
+/// `mechtronhub.com:postgres.org:postgres:gis:8.0.0`
+/// And the above would be embedde into the appropriate Base Kind and Sub Kind:
+/// `<Database<Rel<mechtronhub.com:postgres.org:postgres:gis:8.0.0>>>`}
 pub type Specific = SpecificDef<Domain, SkewerCase, Version>;
 
 impl Specific {
@@ -319,16 +335,16 @@ pub type ProtoVariant = VariantDef<Tw<CamelCaseSubTypes>, Tw<Option<SpecificSubT
 pub type KindDef<Kind, Variant> = ParentChildDef<Kind, Variant>;
 pub type CamelCaseSubTypes = SubTypeDef<CamelCase, Option<CamelCase>>;
 pub type CamelCaseSubTypesSelector = SubTypeDef<Pattern<CamelCase>, OptPattern<CamelCase>>;
-pub type KindSubTypes = SubTypeDef<Kind, Option<CamelCase>>;
-pub type KindFull = KindDef<KindSubTypes, Option<VariantFull>>;
+pub type KindSubTypes = SubTypeDef<KindCat, Option<CamelCase>>;
+pub type Kind = KindDef<KindSubTypes, Option<VariantFull>>;
 pub type ProtoKind = KindDef<Tw<CamelCaseSubTypes>, Tw<Option<ProtoVariant>>>;
-pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindSelector>, OptPattern<CamelCase>>;
+pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindCat>, OptPattern<CamelCase>>;
 
 impl ProtoKind {
-    pub fn to_full(&self) -> Result<KindFull, SpaceErr> {
-        let kind: Kind = Kind::from_str(self.parent.part.as_str())?;
+    pub fn to_full(&self) -> Result<Kind, SpaceErr> {
+        let kind: KindCat = KindCat::from_str(self.parent.part.as_str())?;
         match kind {
-            Kind::Artifact => {
+            KindCat::Artifact => {
                 let sub = self
                     .parent
                     .sub
@@ -348,9 +364,9 @@ impl ProtoKind {
                 match &sub {
                     ArtifactSub::Repo => {
                         if let Some(variant) = self.child.as_ref() {
-                            Ok(KindFull {
+                            Ok(Kind {
                                 parent: SubTypeDef {
-                                    part: Kind::Artifact,
+                                    part: KindCat::Artifact,
                                     sub: Some(CamelCase::from_str("Repo")?),
                                     r#type: None,
                                 },
@@ -375,9 +391,9 @@ impl ProtoKind {
                             )
                             .into())
                         } else {
-                            Ok(KindFull {
+                            Ok(Kind {
                                 parent: SubTypeDef {
-                                    part: Kind::Artifact,
+                                    part: KindCat::Artifact,
                                     sub: Some(CamelCase::from_str(sub.to_string().as_str())?),
                                     r#type: None,
                                 },
@@ -387,14 +403,14 @@ impl ProtoKind {
                     }
                 }
             }
-            Kind::Star => {
+            KindCat::Star => {
                 let star = self.child.as_ref().ok_or(ParseErrs::from_trace(
                     "Star Kind expected to have a StarVariant i.e. Star<Maelstrom>",
                     "missing Variant ",
                     &self.parent.trace,
                 ))?;
 
-                Ok(KindFull {
+                Ok(Kind {
                     child: Some(star.to_full(&kind)?),
                     parent: SubTypeDef {
                         part: kind,
@@ -403,7 +419,7 @@ impl ProtoKind {
                     },
                 })
             }
-            Kind::Native => {
+            KindCat::Native => {
                 let native = self
                     .child
                     .as_ref()
@@ -415,7 +431,7 @@ impl ProtoKind {
                     &self.parent.trace,
                 ))?;
 
-                Ok(KindFull {
+                Ok(Kind {
                     child: Some(native.to_full(&kind)?),
                     parent: SubTypeDef {
                         part: kind,
@@ -424,7 +440,7 @@ impl ProtoKind {
                     },
                 })
             }
-            kind => Ok(KindFull {
+            kind => Ok(Kind {
                 parent: SubTypeDef {
                     part: kind,
                     sub: None,
@@ -437,9 +453,9 @@ impl ProtoKind {
 }
 
 impl ProtoVariant {
-    pub fn to_full(&self, kind: &Kind) -> Result<VariantFull, SpaceErr> {
+    pub fn to_full(&self, kind: &KindCat) -> Result<VariantFull, SpaceErr> {
         let mut variant = match kind {
-            Kind::Artifact => {
+            KindCat::Artifact => {
                 let artifact: Artifact = Artifact::from_str(self.parent.part.as_str())?;
 
                 VariantFull {
@@ -451,7 +467,7 @@ impl ProtoVariant {
                     child: None,
                 }
             }
-            Kind::Star => {
+            KindCat::Star => {
                 let star: StarVariant = StarVariant::from_str(self.parent.part.as_str())?;
 
                 VariantFull {
@@ -463,7 +479,7 @@ impl ProtoVariant {
                     child: None,
                 }
             }
-            Kind::Native => {
+            KindCat::Native => {
                 let native: Native = Native::from_str(self.parent.part.as_str())?;
                 VariantFull {
                     parent: SubTypeDef {
@@ -591,25 +607,25 @@ impl IsMatch<Specific> for SpecificSelector {
             && self.variant.is_match(&other.variant)
     }
 }
-pub type VariantSelector =
+pub type ProtoVariantSelector =
     VariantDef<Tw<Pattern<CamelCaseSubTypesSelector>>, Tw<OptPattern<SpecificSelector>>>;
 
-pub type KindSelector =
-    KindDef<Tw<Pattern<CamelCaseSubTypesSelector>>, Tw<OptPattern<VariantSelector>>>;
+pub type ProtoKindSelector =
+    KindDef<Tw<Pattern<CamelCaseSubTypesSelector>>, Tw<OptPattern<ProtoVariantSelector>>>;
 
-pub type VariantFullSelector =
+pub type VariantSelector =
     VariantDef<Pattern<VariantFullSubTypesSelector>, OptPattern<SpecificSelector>>;
 
-pub type KindFullSelector =
-    KindDef<Pattern<KindFullSubTypesSelector>, OptPattern<VariantFullSelector>>;
+pub type KindSelector =
+    KindDef<Pattern<KindFullSubTypesSelector>, OptPattern<VariantSelector>>;
 
 pub mod parse {
 
     use crate::kind2::{
-        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, KindSelector, OptPattern,
+        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, ProtoKindSelector, OptPattern,
         ParentChildDef, Pattern, ProtoKind, ProtoVariant, Specific, SpecificDef,
         SpecificFullSelector, SpecificSelector, SpecificSubTypes, SpecificSubTypesSelector,
-        SubTypeDef, VariantDef, VariantFullSelector, VariantSelector,
+        SubTypeDef, VariantDef, VariantSelector, ProtoVariantSelector,
     };
     use crate::parse::{camel_case, domain, skewer_case, version, version_req, CamelCase, Domain};
     use crate::selector::specific::ProductVariantSelector;
@@ -763,7 +779,7 @@ pub mod parse {
         )(input)
     }
 
-    pub fn variant_selector<I>(input: I) -> Res<I, VariantSelector>
+    pub fn variant_selector<I>(input: I) -> Res<I, ProtoVariantSelector>
     where
         I: Span,
     {
@@ -783,7 +799,7 @@ pub mod parse {
 
             (
                 next,
-                VariantSelector {
+                ProtoVariantSelector {
                     parent: variant.parent,
                     child: variant.child.replace(child),
                 },
@@ -791,7 +807,7 @@ pub mod parse {
         })
     }
 
-    pub fn kind_selector<I>(input: I) -> Res<I, KindSelector>
+    pub fn kind_selector<I>(input: I) -> Res<I, ProtoKindSelector>
     where
         I: Span,
     {
@@ -811,7 +827,7 @@ pub mod parse {
 
             (
                 next,
-                KindSelector {
+                ProtoKindSelector {
                     parent: kind.parent,
                     child: kind.child.replace(child),
                 },
@@ -1113,8 +1129,8 @@ pub mod parse {
 #[cfg(test)]
 pub mod test {
     use crate::kind2::{
-        Artifact, DomainSelector, IsMatch, Kind, OptPattern, Pattern, SkewerSelector, Specific,
-        SpecificSelector, SpecificSubTypes, SubTypeDef, Variant, VariantFull, VariantFullSelector,
+        Artifact, DomainSelector, IsMatch, KindCat, OptPattern, Pattern, SkewerSelector, Specific,
+        SpecificSelector, SpecificSubTypes, SubTypeDef, Variant, VariantFull, VariantSelector,
         VersionSelector,
     };
     use crate::loc::Version;
@@ -1162,8 +1178,8 @@ pub mod test {
 
     #[test]
     pub fn kind() {
-        let kind1 = Kind::Root.with_variant(Some(create_variant_full()));
-        let kind2 = Kind::Root.with_variant(Some(create_variant_full()));
+        let kind1 = KindCat::Root.with_variant(Some(create_variant_full()));
+        let kind2 = KindCat::Root.with_variant(Some(create_variant_full()));
         assert_eq!(kind1, kind2);
     }
 

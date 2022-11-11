@@ -13,12 +13,11 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Assign, HyperSubstance, ParticleLocation};
-use cosmic_space::kind::{BaseKind, Kind};
 use cosmic_space::loc::{Layer, Point, ToSurface};
 use cosmic_space::log::RootLogger;
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::traversal::{Traversal, TraversalDirection};
-use cosmic_space::selector::KindSelector;
+use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::substance::Substance;
 use cosmic_space::util::log;
 use cosmic_space::wave::core::hyp::HypMethod;
@@ -108,8 +107,8 @@ impl<P> HyperDriverFactory<P> for HostDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Host)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Host)
     }
 
     async fn create(
@@ -438,8 +437,8 @@ impl<P> HyperDriverFactory<P> for MechtronDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Mechtron)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Mechtron)
     }
 
     async fn create(

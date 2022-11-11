@@ -38,9 +38,6 @@ use cosmic_space::command::direct::select::{Select, SelectIntoSubstance, SelectK
 use cosmic_space::command::direct::set::Set;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Location, ParticleLocation, ParticleRecord};
-use cosmic_space::kind::{
-    ArtifactSubKind, BaseKind, FileSubKind, Kind, KindParts, Specific, UserBaseSubKind,
-};
 use cosmic_space::loc::{Point, PointSeg, StarKey, ToBaseKind, Version};
 use cosmic_space::log::PointLogger;
 use cosmic_space::parse::{CamelCase, Domain, SkewerCase};

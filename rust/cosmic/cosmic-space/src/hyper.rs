@@ -8,12 +8,10 @@ use cosmic_macros_primitive::Autobox;
 use crate::command::common::StateSrc;
 use crate::config::mechtron::MechtronConfig;
 use crate::err::SpaceErr;
-use crate::kind::{Kind, KindParts, StarSub};
 use crate::loc::{Point, StarKey, Surface, ToPoint, ToSurface};
 use crate::log::Log;
 use crate::parse::SkewerCase;
 use crate::particle::{Details, Status, Stub};
-use crate::selector::KindSelector;
 use crate::substance::Substance;
 use crate::wave::core::cmd::CmdMethod;
 use crate::wave::core::hyp::HypMethod;
@@ -22,6 +20,7 @@ use crate::wave::{
     Ping, Pong, ReflectedKind, ReflectedProto, ToRecipients, UltraWave, Wave, WaveId, WaveKind,
 };
 use crate::{Agent, Document};
+use crate::kind2::{KindCat, Kind, KindSelector, ProtoKindSelector, StarVariant};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, strum_macros::Display)]
 pub enum AssignmentKind {
@@ -114,7 +113,7 @@ impl ParticleRecord {
             details: Details {
                 stub: Stub {
                     point: Point::root(),
-                    kind: Kind::Root,
+                    kind: Kind::default(),
                     status: Status::Ready,
                 },
                 properties: Default::default(),
@@ -185,7 +184,7 @@ pub struct HostCmd {
 }
 
 impl HostCmd {
-    pub fn kind(&self) -> &Kind {
+    pub fn kind(&self) -> &KindCat {
         &self.details.stub.kind
     }
 
@@ -205,7 +204,7 @@ impl HostCmd {
 }
 
 impl Assign {
-    pub fn kind(&self) -> &Kind {
+    pub fn kind(&self) -> &KindCat {
         &self.details.stub.kind
     }
 
@@ -241,13 +240,13 @@ pub enum HyperSubstance {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Search {
     Star(StarKey),
-    StarKind(StarSub),
+    StarKind(StarVariant),
     Kinds,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Discovery {
-    pub star_kind: StarSub,
+    pub star_kind: StarVariant,
     pub hops: u16,
     pub star_key: StarKey,
     pub kinds: HashSet<KindSelector>,
@@ -311,7 +310,7 @@ pub enum HyperEvent {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Created {
     pub point: Point,
-    pub kind: KindParts,
+    pub kind: Kind,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, strum_macros::Display, Hash)]
@@ -409,10 +408,10 @@ pub enum MountKind {
 }
 
 impl MountKind {
-    pub fn kind(&self) -> Kind {
+    pub fn kind(&self) -> KindCat {
         match self {
-            MountKind::Control => Kind::Control,
-            MountKind::Portal => Kind::Portal,
+            MountKind::Control => KindCat::Control,
+            MountKind::Portal => KindCat::Portal,
         }
     }
 }

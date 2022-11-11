@@ -24,7 +24,6 @@ use crate::config::bind::RouteSelector;
 use crate::err::{CoreReflector, SpaceErr, StatusErr};
 use crate::hyper::AssignmentKind;
 use crate::hyper::InterchangeKind::DefaultControl;
-use crate::kind::Sub;
 use crate::loc::StarKey;
 use crate::loc::{
     Layer, Point, PointSeg, RouteSeg, Surface, SurfaceSelector, ToPoint, ToSurface, Topic, Uuid,
@@ -37,7 +36,6 @@ use crate::parse::sub;
 use crate::particle::Watch;
 use crate::particle::{Details, Status};
 use crate::security::{Permissions, Privilege, Privileges};
-use crate::selector::Selector;
 use crate::settings::Timeouts;
 use crate::substance::Bin;
 use crate::substance::{
@@ -48,6 +46,7 @@ use crate::util::{uuid, ValueMatcher, ValuePattern};
 use crate::wave::core::http2::StatusCode;
 use crate::{ANONYMOUS, HYPERUSER};
 use url::Url;
+use crate::selector::PointSelector;
 
 use self::core::cmd::CmdMethod;
 use self::core::ext::ExtMethod;
@@ -3158,7 +3157,7 @@ impl Default for Scope {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ScopeGrant {
-    pub on: Selector,
+    pub on: PointSelector,
     pub kind: ScopeGrantKind,
     pub aspect: ScopeGrantAspect,
 }

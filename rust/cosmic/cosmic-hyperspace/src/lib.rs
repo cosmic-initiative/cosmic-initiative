@@ -38,9 +38,6 @@ use cosmic_space::command::direct::select::{Select, SubSelect};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::fail::Timeout;
 use cosmic_space::hyper::{ParticleLocation, ParticleRecord};
-use cosmic_space::kind::{
-    ArtifactSubKind, BaseKind, FileSubKind, Kind, NativeSub, Specific, StarSub, UserBaseSubKind,
-};
 use cosmic_space::loc::{
     Layer, MachineName, Point, RouteSeg, StarKey, Surface, ToBaseKind, ToSurface,
 };

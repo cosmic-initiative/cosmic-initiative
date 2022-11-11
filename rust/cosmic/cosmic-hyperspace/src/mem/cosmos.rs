@@ -15,7 +15,6 @@ use crate::{Cosmos, DriversBuilder, MachineTemplate};
 use cosmic_hyperlane::{AnonHyperAuthenticator, HyperGate, LocalHyperwayGateJumper};
 use cosmic_space::artifact::asynch::{ArtifactApi, ReadArtifactFetcher};
 use cosmic_space::err::SpaceErr;
-use cosmic_space::kind::{BaseKind, Kind, StarSub};
 use cosmic_space::loc::{MachineName, StarKey, ToBaseKind};
 use cosmic_space::particle::property::{PropertiesConfig, PropertiesConfigBuilder};
 use mechtron_host::err::HostErr;

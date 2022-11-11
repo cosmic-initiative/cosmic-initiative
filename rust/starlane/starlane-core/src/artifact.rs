@@ -2,7 +2,6 @@ use std::str::{FromStr, Split};
 
 use serde::{Deserialize, Serialize};
 
-use cosmic_space::kind::ArtifactSubKind;
 use mesh_portal::version::latest::id::Point;
 use mesh_portal::version::latest::path::Path;
 

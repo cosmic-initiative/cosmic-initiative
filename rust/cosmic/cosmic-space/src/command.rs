@@ -186,9 +186,7 @@ pub mod direct {
     use crate::err::SpaceErr;
     use crate::fail;
     use crate::fail::{BadRequest, Fail, NotFound};
-    use crate::kind::{BaseKind, KindParts};
     use crate::loc::{Meta, Point};
-    use crate::selector::KindSelector;
     use crate::substance::Bin;
     use crate::substance::{FormErrs, Substance};
     use crate::util::{ValueMatcher, ValuePattern};
@@ -368,7 +366,7 @@ pub mod direct {
         use crate::command::common::{SetProperties, SetRegistry, StateSrc, StateSrcVar};
         use crate::command::Command;
         use crate::err::SpaceErr;
-        use crate::kind::{BaseKind, KindParts};
+        use crate::kind2::ProtoKindSelector;
         use crate::loc::{HostKey, Point, PointCtx, PointFactory, PointSeg, PointVar, ToSurface};
         use crate::parse::model::Subst;
         use crate::parse::{CamelCase, Env, ResolverErr};
@@ -403,7 +401,7 @@ pub mod direct {
         #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
         pub struct TemplateDef<Pnt> {
             pub point: Pnt,
-            pub kind: KindTemplate,
+            pub kind: ProtoKindSelector,
         }
 
         impl ToResolved<Template> for TemplateVar {
@@ -437,55 +435,11 @@ pub mod direct {
         }
 
         impl Template {
-            pub fn new(point: PointTemplate, kind: KindTemplate) -> Self {
+            pub fn new(point: PointTemplate, kind: ProtoKindSelector) -> Self {
                 Self { point, kind }
             }
         }
 
-        #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-        pub struct KindTemplate {
-            pub base: BaseKind,
-            pub sub: Option<CamelCase>,
-            pub specific: Option<SpecificSelector>,
-        }
-
-        impl ToString for KindTemplate {
-            fn to_string(&self) -> String {
-                if self.sub.is_some() {
-                    if self.specific.is_some() {
-                        format!(
-                            "{}<{}<{}>>",
-                            self.base.to_string(),
-                            self.sub.as_ref().unwrap().to_string(),
-                            self.specific.as_ref().unwrap().to_string()
-                        )
-                    } else {
-                        format!(
-                            "{}<{}>",
-                            self.base.to_string(),
-                            self.sub.as_ref().unwrap().to_string()
-                        )
-                    }
-                } else {
-                    self.base.to_string()
-                }
-            }
-        }
-
-        impl TryInto<KindParts> for KindTemplate {
-            type Error = SpaceErr;
-
-            fn try_into(self) -> Result<KindParts, Self::Error> {
-                if self.specific.is_some() {
-                    return Err("cannot create a ResourceKind from a specific pattern when using KindTemplate".into());
-                }
-                Ok(KindParts {
-                    base: self.base,
-                    sub: self.sub,
-                    specific: None,
-                })
-            }
-        }
 
         #[derive(Debug, Clone, Serialize, Deserialize)]
         pub enum Require {
@@ -705,7 +659,7 @@ pub mod direct {
         use crate::loc::Point;
         use crate::parse::Env;
         use crate::particle::Stub;
-        use crate::selector::{Hop, HopCtx, HopVar, PointHierarchy, Selector, SelectorDef};
+        use crate::selector::{Hop, HopCtx, HopVar, PointHierarchy, PointSelector, SelectorDef};
         use crate::substance::{MapPattern, Substance, SubstanceList};
         use crate::util::{ConvertFrom, ToResolved};
 
@@ -772,7 +726,7 @@ pub mod direct {
                 point: Point,
                 hops: Vec<Hop>,
                 hierarchy: PointHierarchy,
-            ) -> SubSelect {
+            ) -> SubSelect<Hop> {
                 SubSelect {
                     point,
                     pattern: self.pattern,
@@ -784,10 +738,10 @@ pub mod direct {
             }
         }
 
-        impl TryInto<SubSelect> for Select {
+        impl <Hop> TryInto<SubSelect<Hop>> for Select {
             type Error = SpaceErr;
 
-            fn try_into(self) -> Result<SubSelect, Self::Error> {
+            fn try_into(self) -> Result<SubSelect<Hop>, Self::Error> {
                 if let SelectKind::SubSelect {
                     point,
                     hops,
@@ -809,16 +763,16 @@ pub mod direct {
         }
 
         #[derive(Debug, Clone)]
-        pub struct SubSelect {
+        pub struct SubSelect<Hop> {
             pub point: Point,
-            pub pattern: Selector,
+            pub pattern: SelectorDef<Hop>,
             pub properties: PropertiesPattern,
             pub into_payload: SelectIntoSubstance,
             pub hops: Vec<Hop>,
             pub hierarchy: PointHierarchy,
         }
 
-        impl Into<Select> for SubSelect {
+        impl <Hop> Into<Select> for SubSelect<Hop> {
             fn into(self) -> Select {
                 Select {
                     pattern: self.pattern,
@@ -833,13 +787,13 @@ pub mod direct {
             }
         }
 
-        impl SubSelect {
+        impl <Hop> SubSelect<Hop> {
             pub fn sub_select(
                 &self,
                 point: Point,
                 hops: Vec<Hop>,
                 hierarchy: PointHierarchy,
-            ) -> SubSelect {
+            ) -> SubSelect<Hop> {
                 SubSelect {
                     point,
                     pattern: self.pattern.clone(),
@@ -852,7 +806,7 @@ pub mod direct {
         }
 
         impl Select {
-            pub fn new(pattern: Selector) -> Self {
+            pub fn new(pattern: PointSelector) -> Self {
                 Self {
                     pattern,
                     properties: Default::default(),

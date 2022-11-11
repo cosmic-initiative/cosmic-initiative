@@ -5,10 +5,9 @@ use crate::star::HyperStarSkel;
 use crate::Cosmos;
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::config::bind::BindConfig;
-use cosmic_space::kind::{BaseKind, Kind};
 use cosmic_space::loc::Point;
 use cosmic_space::parse::bind_config;
-use cosmic_space::selector::KindSelector;
+use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::util::log;
 use cosmic_space::wave::core::{CoreBounce, ReflectedCore};
 use cosmic_space::wave::exchange::asynch::DirectedHandler;
@@ -47,8 +46,8 @@ impl<P> HyperDriverFactory<P> for RootDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Root)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Root)
     }
 
     async fn create(

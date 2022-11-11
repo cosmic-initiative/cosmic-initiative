@@ -7,7 +7,8 @@ use validator::validate_email;
 use crate::command::common::PropertyMod;
 use crate::loc::Point;
 use crate::parse::SkewerCase;
-use crate::{Kind, SetProperties, SpaceErr};
+use crate::{SetProperties, SpaceErr};
+use crate::kind2::KindCat;
 
 pub struct PropertyDef {
     pub pattern: Box<dyn PropertyPattern>,
@@ -143,7 +144,7 @@ pub enum PropertySource {
 
 pub struct PropertiesConfig {
     pub properties: HashMap<String, PropertyDef>,
-    pub kind: Kind,
+    pub kind: KindCat,
 }
 
 impl Deref for PropertiesConfig {
@@ -155,7 +156,7 @@ impl Deref for PropertiesConfig {
 }
 
 impl PropertiesConfig {
-    pub fn new(kind: Kind) -> PropertiesConfig {
+    pub fn new(kind: KindCat) -> PropertiesConfig {
         Self {
             properties: HashMap::new(),
             kind,
@@ -317,7 +318,7 @@ pub enum PropertyPermit {
 }
 
 pub struct PropertiesConfigBuilder {
-    kind: Option<Kind>,
+    kind: Option<KindCat>,
     properties: HashMap<String, PropertyDef>,
 }
 
@@ -340,7 +341,7 @@ impl PropertiesConfigBuilder {
         })
     }
 
-    pub fn kind(&mut self, kind: Kind) {
+    pub fn kind(&mut self, kind: KindCat) {
         self.kind.replace(kind);
     }
 

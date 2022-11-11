@@ -1,5 +1,4 @@
 use cosmic_space::err::SpaceErr;
-use cosmic_space::kind::BaseKind;
 use cosmic_space::loc::ToBaseKind;
 use cosmic_space::particle::property::{
     AnythingPattern, BoolPattern, EmailPattern, PointPattern, PropertiesConfig, PropertyPermit,

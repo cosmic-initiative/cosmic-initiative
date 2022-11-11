@@ -45,7 +45,7 @@ use cosmic_nom::{trim, tw, Res, Span, Wrap};
 
 use crate::command::common::{PropertyMod, SetProperties, StateSrc, StateSrcVar};
 use crate::command::direct::create::{
-    Create, CreateVar, KindTemplate, PointSegTemplate, PointTemplate, PointTemplateSeg,
+    Create, CreateVar, PointSegTemplate, PointTemplate, PointTemplateSeg,
     PointTemplateVar, Require, Strategy, Template, TemplateVar,
 };
 use crate::command::direct::get::{Get, GetOp, GetVar};
@@ -61,10 +61,8 @@ use crate::config::mechtron::MechtronConfig;
 use crate::config::Document;
 use crate::err::report::{Label, Report, ReportKind};
 use crate::err::{ParseErrs, SpaceErr};
-use crate::kind::{
-    ArtifactSubKind, BaseKind, DatabaseSubKind, FileSubKind, Kind, KindParts, NativeSub, Specific,
-    StarSub, UserBaseSubKind,
-};
+use crate::fail::Bad::Kind;
+use crate::kind2::{KindCat, Pattern};
 use crate::loc::StarKey;
 use crate::loc::{
     Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegVar, PointSegment,
@@ -84,14 +82,9 @@ use crate::security::{
     AccessGrantKind, AccessGrantKindDef, ChildPerms, ParticlePerms, Permissions, PermissionsMask,
     PermissionsMaskKind, Privilege,
 };
+use crate::selector::{PointKindSeg, PointSegSelector};
 use crate::selector::specific::{ProductSelector, ProductVariantSelector, VendorSelector};
-use crate::selector::{
-    ExactPointSeg, Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef, MapEntryPattern,
-    MapEntryPatternCtx, MapEntryPatternVar, Pattern, PatternBlock, PatternBlockCtx,
-    PatternBlockVar, PayloadBlock, PayloadBlockCtx, PayloadBlockVar, PayloadType2Def,
-    PointHierarchy, PointKindSeg, PointSegSelector, Selector, SelectorDef, SpecificSelector,
-    SubKindSelector, UploadBlock, VersionReq,
-};
+
 use crate::substance::Bin;
 use crate::substance::{
     Call, CallCtx, CallKind, CallVar, CallWithConfig, CallWithConfigCtx, CallWithConfigVar,
@@ -1818,7 +1811,7 @@ pub fn publish<I: Span>(input: I) -> Res<I, CreateVar> {
     let template = TemplateVar {
         point,
         kind: KindTemplate {
-            base: BaseKind::Bundle,
+            base: KindCat::Bundle,
             sub: None,
             specific: None,
         },
@@ -1830,6 +1823,7 @@ pub fn publish<I: Span>(input: I) -> Res<I, CreateVar> {
         properties: Default::default(),
         strategy: Strategy::Commit,
     };
+
 
     Ok((next, create))
 }
@@ -4841,7 +4835,6 @@ pub mod error {
     use crate::config::bind::{PipelineStepVar, PipelineStopVar, RouteSelector, WaveDirection};
     use crate::err::report::{Label, Report, ReportKind};
     use crate::err::{ParseErrs, SpaceErr};
-    use crate::kind::KindParts;
     use crate::loc::{Layer, PointSeg, PointVar, StarKey, Topic, VarVal, Version};
     use crate::parse::model::{
         BindScope, BindScopeKind, BlockKind, Chunk, DelimitedBlockKind, LexScope, NestedBlockKind,
@@ -4857,9 +4850,6 @@ pub mod error {
     };
     use crate::particle::PointKindVar;
     use crate::selector::{
-        ExactPointSeg, Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef,
-        MapEntryPattern, MapEntryPatternVar, Pattern, PatternBlockVar, PayloadBlockVar,
-        PayloadType2Def, PointSegSelector, SelectorDef, SpecificSelector, SubKindSelector,
         UploadBlock, VersionReq,
     };
     use crate::substance::{
@@ -4873,10 +4863,7 @@ pub mod error {
     use crate::wave::core::http2::HttpMethod;
     use crate::wave::core::hyp::HypMethod;
     use crate::wave::core::{Method, MethodKind, MethodPattern};
-    use crate::{
-        ArtifactSubKind, BaseKind, BindConfig, Document, FileSubKind, Kind, Selector, Specific,
-        StarSub, Strategy, Surface,
-    };
+
 
     pub fn result<I: Span, R>(result: Result<(I, R), Err<ErrorTree<I>>>) -> Result<R, SpaceErr> {
         match result {
@@ -5562,10 +5549,10 @@ pub fn sub_kind_selector<I: Span>(input: I) -> Res<I, SubKindSelector> {
     })
 }
 
-pub fn kind_base<I: Span>(input: I) -> Res<I, BaseKind> {
+pub fn kind_base<I: Span>(input: I) -> Res<I, KindCat> {
     let (next, kind) = context("kind-base", camel_case)(input.clone())?;
 
-    match BaseKind::try_from(kind) {
+    match KindCat::try_from(kind) {
         Ok(kind) => Ok((next, kind)),
         Err(err) => {
             let err = ErrorTree::from_error_kind(input.clone(), ErrorKind::Fail);
@@ -5578,11 +5565,11 @@ pub fn kind_base<I: Span>(input: I) -> Res<I, BaseKind> {
     }
 }
 
-pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
+pub fn resolve_kind<I: Span>(base: KindCat) -> impl FnMut(I) -> Res<I, Kind> {
     move |input: I| {
         let (next, sub) = context("kind-sub", camel_case)(input.clone())?;
         match base {
-            BaseKind::Database => match sub.as_str() {
+            KindCat::Database => match sub.as_str() {
                 "Relational" => {
                     let (next, specific) =
                         context("specific", delimited(tag("<"), specific, tag(">")))(next)?;
@@ -5597,7 +5584,7 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::UserBase => match sub.as_str() {
+            KindCat::UserBase => match sub.as_str() {
                 "OAuth" => {
                     let (next, specific) =
                         context("specific", delimited(tag("<"), specific, tag(">")))(next)?;
@@ -5612,7 +5599,7 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::Native => match NativeSub::from_str(sub.as_str()) {
+            KindCat::Native => match NativeSub::from_str(sub.as_str()) {
                 Ok(sub) => Ok((next, Kind::Native(sub))),
                 Err(err) => {
                     let err = ErrorTree::from_error_kind(input.clone(), ErrorKind::Fail);
@@ -5623,7 +5610,7 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::Artifact => match ArtifactSubKind::from_str(sub.as_str()) {
+            KindCat::Artifact => match ArtifactSubKind::from_str(sub.as_str()) {
                 Ok(sub) => Ok((next, Kind::Artifact(sub))),
                 Err(err) => {
                     let err = ErrorTree::from_error_kind(input.clone(), ErrorKind::Fail);
@@ -5634,7 +5621,7 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::Star => match StarSub::from_str(sub.as_str()) {
+            KindCat::Star => match StarSub::from_str(sub.as_str()) {
                 Ok(sub) => Ok((next, Kind::Star(sub))),
                 Err(err) => {
                     let err = ErrorTree::from_error_kind(input.clone(), ErrorKind::Fail);
@@ -5645,7 +5632,7 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::File => match FileSubKind::from_str(sub.as_str()) {
+            KindCat::File => match FileSubKind::from_str(sub.as_str()) {
                 Ok(sub) => Ok((next, Kind::File(sub))),
                 Err(err) => {
                     let err = ErrorTree::from_error_kind(input.clone(), ErrorKind::Fail);
@@ -5656,22 +5643,22 @@ pub fn resolve_kind<I: Span>(base: BaseKind) -> impl FnMut(I) -> Res<I, Kind> {
                     )))
                 }
             },
-            BaseKind::Root => Ok((next, Kind::Root)),
-            BaseKind::Space => Ok((next, Kind::Space)),
-            BaseKind::Base => Ok((next, Kind::Base)),
-            BaseKind::User => Ok((next, Kind::User)),
-            BaseKind::App => Ok((next, Kind::App)),
-            BaseKind::Mechtron => Ok((next, Kind::Mechtron)),
-            BaseKind::FileSystem => Ok((next, Kind::FileSystem)),
-            BaseKind::BundleSeries => Ok((next, Kind::BundleSeries)),
-            BaseKind::Bundle => Ok((next, Kind::Bundle)),
-            BaseKind::Control => Ok((next, Kind::Control)),
-            BaseKind::Portal => Ok((next, Kind::Portal)),
-            BaseKind::Repo => Ok((next, Kind::Repo)),
-            BaseKind::Driver => Ok((next, Kind::Driver)),
-            BaseKind::Global => Ok((next, Kind::Global)),
-            BaseKind::Host => Ok((next, Kind::Host)),
-            BaseKind::Guest => Ok((next, Kind::Guest)),
+            KindCat::Root => Ok((next, Kind::Root)),
+            KindCat::Space => Ok((next, Kind::Space)),
+            KindCat::Base => Ok((next, Kind::Base)),
+            KindCat::User => Ok((next, Kind::User)),
+            KindCat::App => Ok((next, Kind::App)),
+            KindCat::Mechtron => Ok((next, Kind::Mechtron)),
+            KindCat::FileSystem => Ok((next, Kind::FileSystem)),
+            KindCat::BundleSeries => Ok((next, Kind::BundleSeries)),
+            KindCat::Bundle => Ok((next, Kind::Bundle)),
+            KindCat::Control => Ok((next, Kind::Control)),
+            KindCat::Portal => Ok((next, Kind::Portal)),
+            KindCat::Repo => Ok((next, Kind::Repo)),
+            KindCat::Driver => Ok((next, Kind::Driver)),
+            KindCat::Global => Ok((next, Kind::Global)),
+            KindCat::Host => Ok((next, Kind::Host)),
+            KindCat::Guest => Ok((next, Kind::Guest)),
         }
     }
 }
@@ -5765,7 +5752,7 @@ fn base_hop<I: Span>(input: I) -> Res<I, Hop> {
 fn file_hop<I: Span>(input: I) -> Res<I, Hop> {
     tuple((file_segment, opt(tag("+"))))(input).map(|(next, (segment, inclusive))| {
         let tks = KindSelector {
-            base: Pattern::Exact(BaseKind::File),
+            base: Pattern::Exact(KindCat::File),
             sub: Pattern::Any,
             specific: ValuePattern::Any,
         };
@@ -5844,7 +5831,7 @@ pub fn point_selector<I: Span>(input: I) -> Res<I, Selector> {
                         PointSeg::FilesystemRootDir,
                     )),
                     kind_selector: KindSelector {
-                        base: Pattern::Exact(BaseKind::File),
+                        base: Pattern::Exact(KindCat::File),
                         sub: Pattern::Any,
                         specific: ValuePattern::Any,
                     },
@@ -8726,7 +8713,7 @@ impl TryInto<KindParts> for KindLex {
 
     fn try_into(self) -> Result<KindParts, Self::Error> {
         Ok(KindParts {
-            base: BaseKind::try_from(self.base)?,
+            base: KindCat::try_from(self.base)?,
             sub: self.sub,
             specific: self.specific,
         })

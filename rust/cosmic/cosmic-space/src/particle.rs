@@ -6,14 +6,14 @@ use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 
 use cosmic_nom::{new_span, Res, Span};
+use crate::err::SpaceErr;
+use crate::kind2::{KindCat, Kind};
 
-use crate::kind::{Kind, KindParts};
-use crate::loc::{PointCtx, PointVar};
+use crate::loc::{Point, PointCtx, PointVar};
 use crate::parse::error::result;
 use crate::parse::{parse_alpha1_str, point_and_kind, Env};
 use crate::substance::Substance;
 use crate::util::ToResolved;
-use crate::{BaseKind, Point, SpaceErr};
 
 pub mod property;
 pub mod traversal;
@@ -94,7 +94,7 @@ pub struct Property {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Archetype {
-    pub kind: KindParts,
+    pub kind: Kind,
     pub properties: Properties,
 }
 
@@ -130,7 +130,7 @@ impl Default for Stub {
     fn default() -> Self {
         Self {
             point: Point::root(),
-            kind: Kind::Root,
+            kind: Kind::default(),
             status: Status::Unknown,
         }
     }
@@ -190,7 +190,6 @@ pub mod particle {
     use cosmic_nom::{Res, Span};
 
     use crate::err::SpaceErr;
-    use crate::kind::{BaseKind, Kind, KindParts};
     use crate::loc::Point;
     use crate::parse::parse_alpha1_str;
     use crate::particle::PointKind;
@@ -313,5 +312,5 @@ impl FromStr for PointKind {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct AddressAndType {
     pub point: Point,
-    pub resource_type: BaseKind,
+    pub resource_type: KindCat,
 }

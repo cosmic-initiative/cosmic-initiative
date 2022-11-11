@@ -14,7 +14,7 @@ use crate::err::SpaceErr;
 use crate::loc::Point;
 use crate::parse::error::result;
 use crate::parse::{particle_perms, permissions, permissions_mask, privilege, MapResolver};
-use crate::selector::{PointHierarchy, Selector};
+use crate::selector::{PointHierarchy, PointSelector};
 use crate::wave::ScopeGrant;
 use crate::Agent;
 
@@ -494,7 +494,7 @@ pub struct AccessGrantDef<Priv, PermMask, PointSelector, Point> {
     pub by_particle: Point,
 }
 
-pub type GrantTo = GrantToDef<Selector>;
+pub type GrantTo = GrantToDef<PointSelector>;
 pub enum GrantToDef<PointSelector> {
     World,
     PointSelector(PointSelector),
@@ -512,7 +512,7 @@ impl GrantTo {
     }
 }
 
-pub type AccessGrant = AccessGrantDef<Privilege, PermissionsMask, Selector, Point>;
+pub type AccessGrant = AccessGrantDef<Privilege, PermissionsMask, PointSelector, Point>;
 pub type AccessGrantKind = AccessGrantKindDef<Privilege, PermissionsMask>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

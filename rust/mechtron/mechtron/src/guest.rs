@@ -5,7 +5,6 @@ use cosmic_macros::handler_sync;
 use cosmic_space::artifact::synch::{ArtifactApi, ArtifactFetcher};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::HyperSubstance;
-use cosmic_space::kind::Kind::Mechtron;
 use cosmic_space::loc::{Layer, Point, ToSurface};
 use cosmic_space::log::{
     LogSource, NoAppender, PointLogger, RootLogger, SynchTransmittingLogAppender,

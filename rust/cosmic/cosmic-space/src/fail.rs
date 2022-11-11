@@ -3,7 +3,6 @@ use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
 use crate::err::SpaceErr;
-use crate::kind::Specific;
 
 pub mod mesh {
     use alloc::string::String;

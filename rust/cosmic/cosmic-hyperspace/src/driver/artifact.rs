@@ -18,11 +18,10 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Assign, HyperSubstance, ParticleLocation};
-use cosmic_space::kind::{ArtifactSubKind, BaseKind, Kind};
 use cosmic_space::loc::{Point, ToBaseKind};
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::PointKind;
-use cosmic_space::selector::KindSelector;
+use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::substance::{Bin, Substance};
 use cosmic_space::util::log;
 use cosmic_space::wave::core::{CoreBounce, DirectedCore, ReflectedCore};
@@ -117,8 +116,8 @@ impl<P> HyperDriverFactory<P> for RepoDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Repo)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Repo)
     }
 
     async fn create(
@@ -206,8 +205,8 @@ impl<P> HyperDriverFactory<P> for BundleSeriesDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::BundleSeries)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::BundleSeries)
     }
 
     async fn create(
@@ -271,8 +270,8 @@ impl<P> HyperDriverFactory<P> for BundleDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Bundle)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Bundle)
     }
 
     async fn create(
@@ -554,8 +553,8 @@ impl<P> HyperDriverFactory<P> for ArtifactDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Artifact)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Artifact)
     }
 
     async fn create(

@@ -19,11 +19,10 @@ use cosmic_space::command::RawCommand;
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{ControlPattern, Greet, InterchangeKind};
-use cosmic_space::kind::{BaseKind, Kind, StarSub};
 use cosmic_space::loc::{Layer, Point, PointFactory, Surface, ToSurface};
 use cosmic_space::log::{RootLogger, Tracker};
 use cosmic_space::particle::traversal::Traversal;
-use cosmic_space::selector::KindSelector;
+use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::settings::Timeouts;
 use cosmic_space::substance::Substance;
 use cosmic_space::wave::core::ext::ExtMethod;
@@ -51,8 +50,8 @@ impl<P> HyperDriverFactory<P> for ControlDriverFactory<P>
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Control)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Control)
     }
 
     fn avail(&self) -> DriverAvail {
@@ -110,8 +109,8 @@ impl<P> HyperDriverFactory<P> for ControlFactory<P>
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Control)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Control)
     }
 
     async fn create(

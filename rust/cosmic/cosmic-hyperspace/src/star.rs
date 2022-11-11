@@ -35,7 +35,6 @@ use cosmic_space::hyper::{
     Provision, Search,
 };
 use cosmic_space::hyper::{MountKind, ParticleLocation};
-use cosmic_space::kind::{BaseKind, Kind, StarStub, StarSub, Sub};
 use cosmic_space::loc::{
     Layer, Point, RouteSeg, StarKey, Surface, SurfaceSelector, ToBaseKind, ToPoint, ToSurface,
     Topic, Uuid, GLOBAL_EXEC, LOCAL_STAR,

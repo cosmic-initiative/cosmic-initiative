@@ -22,7 +22,6 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Assign, HyperSubstance, ParticleLocation, ParticleRecord};
-use cosmic_space::kind::{BaseKind, Kind, KindParts, StarSub};
 use cosmic_space::loc::{Layer, Point, Surface, ToPoint, ToSurface};
 use cosmic_space::log::{PointLogger, Tracker};
 use cosmic_space::parse::bind_config;
@@ -30,7 +29,7 @@ use cosmic_space::particle::traversal::{
     Traversal, TraversalDirection, TraversalInjection, TraversalLayer,
 };
 use cosmic_space::particle::{Details, Status, Stub};
-use cosmic_space::selector::KindSelector;
+use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::substance::Substance;
 use cosmic_space::util::log;
 use cosmic_space::wave::core::cmd::CmdMethod;
@@ -86,8 +85,8 @@ where
     P: Cosmos,
 {
     factories: Vec<Arc<dyn HyperDriverFactory<P>>>,
-    kinds: Vec<KindSelector>,
-    external_kinds: Vec<KindSelector>,
+    kinds: Vec<ProtoKindSelector>,
+    external_kinds: Vec<ProtoKindSelector>,
 }
 
 impl<P> DriversBuilder<P>
@@ -120,7 +119,7 @@ where
         }
     }
 
-    pub fn kinds(&self) -> Vec<KindSelector> {
+    pub fn kinds(&self) -> Vec<ProtoKindSelector> {
         self.kinds.clone()
     }
 
@@ -174,8 +173,8 @@ where
         rtn: oneshot::Sender<()>,
     },
     Visit(Traversal<UltraWave>),
-    InternalKinds(oneshot::Sender<Vec<KindSelector>>),
-    ExternalKinds(oneshot::Sender<Vec<KindSelector>>),
+    InternalKinds(oneshot::Sender<Vec<ProtoKindSelector>>),
+    ExternalKinds(oneshot::Sender<Vec<ProtoKindSelector>>),
     Find {
         kind: Kind,
         rtn: oneshot::Sender<Option<DriverApi<P>>>,
@@ -188,7 +187,7 @@ where
         kind: Kind,
         rtn: oneshot::Sender<Option<DriverApi<P>>>,
     },
-    Drivers(oneshot::Sender<HashMap<KindSelector, DriverApi<P>>>),
+    Drivers(oneshot::Sender<HashMap<ProtoKindSelector, DriverApi<P>>>),
     Get {
         kind: Kind,
         rtn: oneshot::Sender<Result<DriverApi<P>, SpaceErr>>,
@@ -198,7 +197,7 @@ where
         rtn: oneshot::Sender<Option<Point>>,
     },
     Status {
-        kind: KindSelector,
+        kind: ProtoKindSelector,
         rtn: oneshot::Sender<Result<DriverStatus, SpaceErr>>,
     },
     StatusRx(oneshot::Sender<watch::Receiver<DriverStatus>>),
@@ -241,13 +240,13 @@ where
         self.call_tx.send(DriversCall::Visit(traversal)).await;
     }
 
-    pub async fn internal_kinds(&self) -> Result<Vec<KindSelector>, SpaceErr> {
+    pub async fn internal_kinds(&self) -> Result<Vec<ProtoKindSelector>, SpaceErr> {
         let (rtn, mut rtn_rx) = oneshot::channel();
         self.call_tx.send(DriversCall::InternalKinds(rtn)).await?;
         Ok(rtn_rx.await?)
     }
 
-    pub async fn external_kinds(&self) -> Result<Vec<KindSelector>, SpaceErr> {
+    pub async fn external_kinds(&self) -> Result<Vec<ProtoKindSelector>, SpaceErr> {
         let (rtn, mut rtn_rx) = oneshot::channel();
         self.call_tx.send(DriversCall::ExternalKinds(rtn)).await?;
         Ok(rtn_rx.await?)
@@ -283,7 +282,7 @@ where
         Ok(rtn_rx.await?)
     }
 
-    pub async fn drivers(&self) -> Result<HashMap<KindSelector, DriverApi<P>>, SpaceErr> {
+    pub async fn drivers(&self) -> Result<HashMap<ProtoKindSelector, DriverApi<P>>, SpaceErr> {
         let (rtn, mut rtn_rx) = oneshot::channel();
         self.call_tx.send(DriversCall::Drivers(rtn)).await;
         Ok(rtn_rx.await?)
@@ -331,15 +330,15 @@ where
     port: Surface,
     skel: HyperStarSkel<P>,
     factories: Vec<Arc<dyn HyperDriverFactory<P>>>,
-    kind_to_driver: HashMap<KindSelector, DriverApi<P>>,
+    kind_to_driver: HashMap<ProtoKindSelector, DriverApi<P>>,
     point_to_driver: HashMap<Point, DriverApi<P>>,
     call_rx: mpsc::Receiver<DriversCall<P>>,
     call_tx: mpsc::Sender<DriversCall<P>>,
-    statuses_rx: Arc<DashMap<KindSelector, watch::Receiver<DriverStatus>>>,
+    statuses_rx: Arc<DashMap<ProtoKindSelector, watch::Receiver<DriverStatus>>>,
     status_tx: mpsc::Sender<DriverStatus>,
     status_rx: watch::Receiver<DriverStatus>,
-    kinds: Vec<KindSelector>,
-    external_kinds: Vec<KindSelector>,
+    kinds: Vec<ProtoKindSelector>,
+    external_kinds: Vec<ProtoKindSelector>,
     init: bool,
 }
 
@@ -351,8 +350,8 @@ where
         port: Surface,
         skel: HyperStarSkel<P>,
         factories: Vec<Arc<dyn HyperDriverFactory<P>>>,
-        kinds: Vec<KindSelector>,
-        external_kinds: Vec<KindSelector>,
+        kinds: Vec<ProtoKindSelector>,
+        external_kinds: Vec<ProtoKindSelector>,
         call_tx: mpsc::Sender<DriversCall<P>>,
         call_rx: mpsc::Receiver<DriversCall<P>>,
         watch_status_tx: watch::Sender<DriverStatus>,
@@ -496,11 +495,11 @@ where
         });
     }
 
-    pub fn internal_kinds(&self) -> Vec<KindSelector> {
+    pub fn internal_kinds(&self) -> Vec<ProtoKindSelector> {
         self.kinds.clone()
     }
 
-    pub fn external_kinds(&self) -> Vec<KindSelector> {
+    pub fn external_kinds(&self) -> Vec<ProtoKindSelector> {
         self.external_kinds.clone()
     }
     pub async fn init0(&mut self) {
@@ -510,7 +509,7 @@ where
             let factory = self.factories.remove(0);
             let (status_tx, mut status_rx) = watch::channel(DriverStatus::Pending);
             self.statuses_rx
-                .insert(KindSelector::from_base(BaseKind::Driver), status_rx.clone());
+                .insert(ProtoKindSelector::from_base(BaseKind::Driver), status_rx.clone());
 
             self.create(factory.kind(), factory.clone(), status_tx)
                 .await;
@@ -628,7 +627,7 @@ where
 
     async fn create(
         &self,
-        kind: KindSelector,
+        kind: ProtoKindSelector,
         factory: Arc<dyn HyperDriverFactory<P>>,
         status_tx: watch::Sender<DriverStatus>,
     ) {
@@ -951,7 +950,7 @@ where
     P: Cosmos,
 {
     pub call_tx: mpsc::Sender<DriverRunnerCall<P>>,
-    pub kind: KindSelector,
+    pub kind: ProtoKindSelector,
     pub point: Point,
 }
 
@@ -959,7 +958,7 @@ impl<P> DriverApi<P>
 where
     P: Cosmos,
 {
-    pub fn new(tx: mpsc::Sender<DriverRunnerCall<P>>, point: Point, kind: KindSelector) -> Self {
+    pub fn new(tx: mpsc::Sender<DriverRunnerCall<P>>, point: Point, kind: ProtoKindSelector) -> Self {
         Self {
             call_tx: tx,
             point,
@@ -1422,7 +1421,7 @@ where
     P: Cosmos,
 {
     skel: HyperStarSkel<P>,
-    pub kind: KindSelector,
+    pub kind: ProtoKindSelector,
     pub point: Point,
     pub logger: PointLogger,
     pub status_rx: watch::Receiver<DriverStatus>,
@@ -1457,7 +1456,7 @@ where
 
     pub fn new(
         skel: HyperStarSkel<P>,
-        kind: KindSelector,
+        kind: ProtoKindSelector,
         point: Point,
         transmitter: ProtoTransmitter,
         logger: PointLogger,
@@ -1558,7 +1557,7 @@ impl<P> HyperDriverFactory<P> for DriverFactoryWrapper<P>
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
+    fn kind(&self) -> ProtoKindSelector {
         self.factory.kind()
     }
 
@@ -1577,7 +1576,7 @@ pub trait DriverFactory<P>: Send + Sync
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector;
+    fn kind(&self) -> ProtoKindSelector;
 
     fn avail(&self) -> DriverAvail {
         DriverAvail::External
@@ -1599,7 +1598,7 @@ pub trait HyperDriverFactory<P>: Send + Sync
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector;
+    fn kind(&self) -> ProtoKindSelector;
 
     fn avail(&self) -> DriverAvail {
         DriverAvail::External
@@ -1858,8 +1857,8 @@ impl<P> HyperDriverFactory<P> for DriverDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector::from_base(BaseKind::Driver)
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector::from_base(BaseKind::Driver)
     }
 
     fn avail(&self) -> DriverAvail {

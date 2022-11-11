@@ -21,7 +21,7 @@ use cosmic_space::loc::{Layer, Point, ToSurface};
 use cosmic_space::parse::{bind_config, CamelCase};
 use cosmic_space::particle::traversal::{Traversal, TraversalDirection};
 use cosmic_space::particle::Status;
-use cosmic_space::selector::{KindSelector, Pattern, SubKindSelector};
+use cosmic_space::selector::{ProtoKindSelector, Pattern, SubKindSelector};
 use cosmic_space::substance::{Bin, Substance};
 use cosmic_space::util::{log, ValuePattern};
 use cosmic_space::wave::core::http2::{HttpMethod, HttpRequest};
@@ -74,8 +74,8 @@ impl<P> HyperDriverFactory<P> for WebDriverFactory
 where
     P: Cosmos,
 {
-    fn kind(&self) -> KindSelector {
-        KindSelector {
+    fn kind(&self) -> ProtoKindSelector {
+        ProtoKindSelector {
             base: Pattern::Exact(BaseKind::Native),
             sub: SubKindSelector::Exact(Some(CamelCase::from_str("Web").unwrap())),
             specific: ValuePattern::Any,

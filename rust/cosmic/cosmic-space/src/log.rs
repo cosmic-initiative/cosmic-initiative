@@ -14,7 +14,7 @@ use crate::command::common::StateSrc::Substance;
 use crate::err::SpaceErr;
 use crate::loc::{Layer, Point, ToPoint, ToSurface, Uuid};
 use crate::parse::{to_string, CamelCase};
-use crate::selector::Selector;
+use crate::selector::PointSelector;
 use crate::substance::LogSubstance;
 use crate::util::{timestamp, uuid};
 use crate::wasm::Timestamp;
@@ -1172,28 +1172,18 @@ pub type TrackRegex = TrackDef<Regex>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct TrackDef<R> {
-    selector: Selector,
+    selector: PointSelector,
     stop: R,
     action: R,
 }
 
 impl TrackRegex {
-    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> Result<Self, SpaceErr> {
-        let selector = Selector::from_str(selector.to_string().as_str())?;
-        let stop = Regex::from_str(stop.to_string().as_str())?;
-        let action = Regex::from_str(action.to_string().as_str())?;
 
-        Ok(Self {
-            selector,
-            stop,
-            action,
-        })
-    }
 }
 
 impl TrackDef<String> {
     pub fn new<S: ToString>(selector: S, stop: S, action: S) -> Result<Self, SpaceErr> {
-        let selector = Selector::from_str(selector.to_string().as_str())?;
+        let selector = PointSelector::from_str(selector.to_string().as_str())?;
         Regex::from_str(stop.to_string().as_str())?;
         Regex::from_str(action.to_string().as_str())?;
 

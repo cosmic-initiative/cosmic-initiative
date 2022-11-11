@@ -10,9 +10,8 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, Trace, Tw};
 
-use crate::err::ParseErrs;
+use crate::err::{ParseErrs, SpaceErr};
 use crate::hyper::ChildRegistry;
-use crate::kind::KindParts;
 use crate::log::{SpanLogger, Trackable};
 use crate::parse::error::result;
 use crate::parse::{
@@ -21,15 +20,13 @@ use crate::parse::{
     SkewerCase,
 };
 use crate::particle::traversal::TraversalPlan;
-use crate::selector::{Pattern, Selector, SpecificSelector, VersionReq};
+use crate::selector::{Pattern, SpecificSelector, VersionReq};
 use crate::util::{uuid, ToResolved, ValueMatcher, ValuePattern};
 use crate::wave::exchange::asynch::Exchanger;
-use crate::wave::{
-    DirectedWave, Ping, Pong, Recipients, ReflectedWave, SingularDirectedWave, ToRecipients,
-    UltraWave, Wave,
-};
+use crate::wave::{Agent, DirectedWave, Ping, Pong, Recipients, ReflectedWave, SingularDirectedWave, ToRecipients, UltraWave, Wave};
 use crate::Agent::Anonymous;
-use crate::{Agent, BaseKind, Kind, KindTemplate, ParticleRecord, SpaceErr, ANONYMOUS, HYPERUSER};
+use crate::{ANONYMOUS, HYPERUSER};
+use crate::kind2::KindCat;
 
 lazy_static! {
     pub static ref CENTRAL: Point = StarKey::central().to_point();
@@ -72,7 +69,7 @@ lazy_static! {
 }
 
 pub trait ToBaseKind {
-    fn to_base(&self) -> BaseKind;
+    fn to_base(&self) -> KindCat;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -1164,14 +1161,7 @@ impl ToResolved<Point> for PointVar {
     }
 }
 
-impl Into<Selector> for Point {
-    fn into(self) -> Selector {
-        let string = self.to_string();
-        let rtn = result(all_consuming(point_selector)(new_span(string.as_str()))).unwrap();
-        string;
-        rtn
-    }
-}
+
 
 impl PointCtx {
     pub fn to_point(self) -> Result<Point, SpaceErr> {

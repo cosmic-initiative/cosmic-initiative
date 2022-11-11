@@ -14,13 +14,12 @@ use cosmic_space::err::{CoreReflector, SpaceErr};
 use cosmic_space::hyper::{
     Assign, AssignmentKind, Discoveries, Discovery, HyperSubstance, ParticleLocation, Search,
 };
-use cosmic_space::kind::{BaseKind, Kind, StarSub};
 use cosmic_space::loc::{Layer, Point, StarKey, ToPoint, ToSurface, LOCAL_STAR};
 use cosmic_space::log::{Trackable, Tracker};
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::traversal::TraversalInjection;
 use cosmic_space::particle::Status;
-use cosmic_space::selector::{KindSelector, Pattern, SubKindSelector};
+use cosmic_space::selector::{ProtoKindSelector, Pattern, SubKindSelector};
 use cosmic_space::substance::Substance;
 use cosmic_space::util::{log, ValuePattern};
 use cosmic_space::wave::core::http2::StatusCode;
@@ -138,7 +137,7 @@ pub struct StarDriverFactory<P>
 where
     P: Cosmos + 'static,
 {
-    pub kind: KindSelector,
+    pub kind: ProtoKindSelector,
     pub phantom: PhantomData<P>,
 }
 
@@ -147,7 +146,7 @@ where
     P: Cosmos + 'static,
 {
     pub fn new(sub: StarSub) -> Self {
-        let kind = KindSelector {
+        let kind = ProtoKindSelector {
             base: Pattern::Exact(BaseKind::Star),
             sub: SubKindSelector::Exact(Some(sub.to_camel_case())),
             specific: ValuePattern::Any,
@@ -164,7 +163,7 @@ impl<P> HyperDriverFactory<P> for StarDriverFactory<P>
 where
     P: Cosmos + 'static,
 {
-    fn kind(&self) -> KindSelector {
+    fn kind(&self) -> ProtoKindSelector {
         self.kind.clone()
     }
 
@@ -631,7 +630,7 @@ where
 
 #[derive(Clone)]
 pub struct StarWrangles {
-    pub wrangles: Arc<DashMap<KindSelector, Arc<RwLock<RoundRobinWrangleSelector>>>>,
+    pub wrangles: Arc<DashMap<ProtoKindSelector, Arc<RwLock<RoundRobinWrangleSelector>>>>,
 }
 
 impl StarWrangles {
@@ -700,14 +699,14 @@ impl StarWrangles {
 }
 
 pub struct RoundRobinWrangleSelector {
-    pub kind: KindSelector,
+    pub kind: ProtoKindSelector,
     pub stars: Vec<StarDiscovery>,
     pub index: usize,
     pub step_index: usize,
 }
 
 impl RoundRobinWrangleSelector {
-    pub fn new(kind: KindSelector) -> Self {
+    pub fn new(kind: ProtoKindSelector) -> Self {
         Self {
             kind,
             stars: vec![],
