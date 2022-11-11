@@ -185,7 +185,7 @@ pub struct HostCmd {
 
 impl HostCmd {
     pub fn kind(&self) -> &KindCat {
-        &self.details.stub.kind
+        &self.details.stub.kind.parent.part
     }
 
     pub fn new(
@@ -205,7 +205,7 @@ impl HostCmd {
 
 impl Assign {
     pub fn kind(&self) -> &KindCat {
-        &self.details.stub.kind
+        &self.details.stub.kind.parent.part
     }
 
     pub fn new(kind: AssignmentKind, details: Details, state: StateSrc) -> Self {

@@ -8,10 +8,12 @@ use serde::de::{Error, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, Trace};
-use specific::{ProductSelector, ProviderSelector, ProductVariantSelector, VendorSelector};
+use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector};
 
+use crate::kind2::{Kind, ProtoKindSelector, Specific};
 use crate::loc::{
-    Layer, PointCtx, PointSeg, PointVar, RouteSeg, ToBaseKind, Topic, VarVal, Variable, Version,
+    Layer, PointCtx, PointSeg, PointSegCtx, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic,
+    VarVal, Variable, Version,
 };
 use crate::parse::error::result;
 use crate::parse::{
@@ -24,10 +26,6 @@ use crate::substance::{
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
-use crate::kind2::{Kind, ProtoKindSelector, Specific};
-
-
-
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct VersionReq {
@@ -388,50 +386,6 @@ pub struct MapEntryPatternDef<Pnt> {
     pub payload: ValuePattern<SubstancePatternDef<Pnt>>,
 }
 
-pub type Hop = HopDef<PointSegSelector, ProtoKindSelector>;
-pub type HopCtx = HopDef<PointSegSelectorCtx, ProtoKindSelector>;
-pub type HopVar = HopDef<PointSegSelectorVar, ProtoKindSelector>;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct HopDef<Segment, KindSelector> {
-    pub inclusive: bool,
-    pub segment_selector: Segment,
-    pub kind_selector: KindSelector,
-}
-
-impl Hop {
-    pub fn matches(&self, point_kind_segment: &PointKindSeg) -> bool {
-        self.segment_selector.matches(&point_kind_segment.segment)
-            && self.kind_selector.matches(&point_kind_segment.kind)
-    }
-}
-
-impl ToString for Hop {
-    fn to_string(&self) -> String {
-        let mut rtn = String::new();
-        rtn.push_str(self.segment_selector.to_string().as_str());
-
-        if let Pattern::Exact(base) = &self.kind_selector.base {
-            rtn.push_str(format!("<{}", base.to_string()).as_str());
-            if let Pattern::Exact(sub) = &self.kind_selector.sub {
-                rtn.push_str(format!("<{}", sub.as_ref().unwrap().to_string()).as_str());
-                if let ValuePattern::Pattern(specific) = &self.kind_selector.specific {
-                    rtn.push_str(format!("<{}", specific.to_string()).as_str());
-                    rtn.push_str(">");
-                }
-                rtn.push_str(">");
-            }
-            rtn.push_str(">");
-        }
-
-        if self.inclusive {
-            rtn.push_str("+");
-        }
-
-        rtn
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Pattern<P> {
     Any,
@@ -561,7 +515,6 @@ where
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct PortHierarchy {
     pub topic: Topic,
@@ -592,8 +545,7 @@ impl PointHierarchy {
 }
 
 impl PointHierarchy {
-    pub fn push(&self, segment: PointKindSeg) -> PointHierarchy
-    {
+    pub fn push(&self, segment: PointKindSeg) -> PointHierarchy {
         if let PointSeg::Root = segment.segment {
             println!("pushing ROOT");
         }
@@ -760,11 +712,42 @@ impl ToResolved<PayloadBlock> for PayloadBlockVar {
     }
 }
 
+pub type PointSelector = PointSelectorDef<PointSeg>;
+pub type PointSelectorCtx = PointSelectorDef<PointSegCtx>;
+pub type PointSelectorVar = PointSelectorDef<PointSegVar>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct PointSelector;
+pub struct PointSelectorDef<Seg> {
+    pub route: RouteSeg,
+    pub segments: Vec<Seg>,
+}
+impl ToResolved<PointSelector> for PointSelectorCtx {
+    fn to_resolved(self, env: &Env) -> Result<PointSelector, SpaceErr> {
+        todo!()
+    }
+}
+
+impl ToResolved<PointSelectorCtx> for PointSelectorVar {
+    fn to_resolved(self, env: &Env) -> Result<PointSelectorCtx, SpaceErr> {
+        todo!()
+    }
+}
+
+impl PointSelector {
+    pub fn matches(&self, point: &Point) -> bool {
+        todo!()
+    }
+}
+
+impl<Seg> FromStr for PointSelectorDef<Seg> {
+    type Err = SpaceErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct SelectorDef<Hop> {
-    phantom: PhantomData<Hop>
+    phantom: PhantomData<Hop>,
 }

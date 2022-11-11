@@ -659,7 +659,7 @@ pub mod direct {
         use crate::loc::Point;
         use crate::parse::Env;
         use crate::particle::Stub;
-        use crate::selector::{Hop, HopCtx, HopVar, PointHierarchy, PointSelector, SelectorDef};
+        use crate::selector::{PointHierarchy, PointSelector, PointSelectorCtx, PointSelectorVar, SelectorDef};
         use crate::substance::{MapPattern, Substance, SubstanceList};
         use crate::util::{ConvertFrom, ToResolved};
 
@@ -692,9 +692,9 @@ pub mod direct {
             }
         }
 
-        pub type Select = SelectDef<Hop>;
-        pub type SelectCtx = SelectDef<Hop>;
-        pub type SelectVar = SelectDef<Hop>;
+        pub type Select = SelectDef<PointSelector>;
+        pub type SelectCtx = SelectDef<PointSelectorCtx>;
+        pub type SelectVar = SelectDef<PointSelectorVar>;
 
         impl ToResolved<Select> for Select {
             fn to_resolved(self, env: &Env) -> Result<Select, SpaceErr> {
@@ -702,108 +702,29 @@ pub mod direct {
             }
         }
 
+         impl ToResolved<Select> for SelectCtx {
+            fn to_resolved(self, env: &Env) -> Result<Select, SpaceErr> {
+                todo!()
+            }
+        }
+
+        impl ToResolved<SelectCtx> for SelectVar {
+            fn to_resolved(self, env: &Env) -> Result<SelectCtx, SpaceErr> {
+                todo!()
+            }
+        }
+
+
         #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-        pub struct SelectDef<Hop> {
-            pub pattern: SelectorDef<Hop>,
+        pub struct SelectDef<S> {
+            pub pattern: S,
             pub properties: PropertiesPattern,
             pub into_substance: SelectIntoSubstance,
-            pub kind: SelectKind,
         }
 
-        #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-        pub enum SelectKind {
-            Initial,
-            SubSelect {
-                point: Point,
-                hops: Vec<Hop>,
-                hierarchy: PointHierarchy,
-            },
-        }
 
-        impl Select {
-            pub fn sub_select(
-                self,
-                point: Point,
-                hops: Vec<Hop>,
-                hierarchy: PointHierarchy,
-            ) -> SubSelect<Hop> {
-                SubSelect {
-                    point,
-                    pattern: self.pattern,
-                    properties: self.properties,
-                    into_payload: self.into_substance,
-                    hops,
-                    hierarchy,
-                }
-            }
-        }
 
-        impl <Hop> TryInto<SubSelect<Hop>> for Select {
-            type Error = SpaceErr;
 
-            fn try_into(self) -> Result<SubSelect<Hop>, Self::Error> {
-                if let SelectKind::SubSelect {
-                    point,
-                    hops,
-                    hierarchy,
-                } = self.kind
-                {
-                    Ok(SubSelect {
-                        point,
-                        pattern: self.pattern,
-                        properties: self.properties,
-                        into_payload: self.into_substance,
-                        hops: hops,
-                        hierarchy,
-                    })
-                } else {
-                    Err("Not of kind SubSelector".into())
-                }
-            }
-        }
-
-        #[derive(Debug, Clone)]
-        pub struct SubSelect<Hop> {
-            pub point: Point,
-            pub pattern: SelectorDef<Hop>,
-            pub properties: PropertiesPattern,
-            pub into_payload: SelectIntoSubstance,
-            pub hops: Vec<Hop>,
-            pub hierarchy: PointHierarchy,
-        }
-
-        impl <Hop> Into<Select> for SubSelect<Hop> {
-            fn into(self) -> Select {
-                Select {
-                    pattern: self.pattern,
-                    properties: self.properties,
-                    into_substance: self.into_payload,
-                    kind: SelectKind::SubSelect {
-                        point: self.point,
-                        hops: self.hops,
-                        hierarchy: self.hierarchy,
-                    },
-                }
-            }
-        }
-
-        impl <Hop> SubSelect<Hop> {
-            pub fn sub_select(
-                &self,
-                point: Point,
-                hops: Vec<Hop>,
-                hierarchy: PointHierarchy,
-            ) -> SubSelect<Hop> {
-                SubSelect {
-                    point,
-                    pattern: self.pattern.clone(),
-                    properties: self.properties.clone(),
-                    into_payload: self.into_payload.clone(),
-                    hops,
-                    hierarchy,
-                }
-            }
-        }
 
         impl Select {
             pub fn new(pattern: PointSelector) -> Self {
@@ -811,7 +732,6 @@ pub mod direct {
                     pattern,
                     properties: Default::default(),
                     into_substance: SelectIntoSubstance::Stubs,
-                    kind: SelectKind::Initial,
                 }
             }
         }
@@ -825,12 +745,12 @@ pub mod direct {
         use crate::command::direct::select::{PropertiesPattern, Select, SelectIntoSubstance};
         use crate::err::SpaceErr;
         use crate::parse::Env;
-        use crate::selector::{Hop, SelectorDef};
+        use crate::selector::{PointSelector, PointSelectorCtx, PointSelectorVar, SelectorDef};
         use crate::util::ToResolved;
 
-        pub type Delete = DeleteDef<Hop>;
-        pub type DeleteCtx = DeleteDef<Hop>;
-        pub type DeleteVar = DeleteDef<Hop>;
+        pub type Delete = DeleteDef<PointSelector>;
+        pub type DeleteCtx = DeleteDef<PointSelectorCtx>;
+        pub type DeleteVar = DeleteDef<PointSelectorVar>;
 
         impl ToResolved<Delete> for Delete {
             fn to_resolved(self, env: &Env) -> Result<Delete, SpaceErr> {
@@ -838,9 +758,23 @@ pub mod direct {
             }
         }
 
+        impl ToResolved<Delete> for DeleteCtx {
+            fn to_resolved(self, env: &Env) -> Result<Delete, SpaceErr> {
+                todo!()
+            }
+        }
+
+
+        impl ToResolved<DeleteCtx> for DeleteVar {
+            fn to_resolved(self, env: &Env) -> Result<DeleteCtx, SpaceErr> {
+                todo!()
+            }
+        }
+
+
         #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-        pub struct DeleteDef<Hop> {
-            pub selector: SelectorDef<Hop>,
+        pub struct DeleteDef<Selector> {
+            pub selector: Selector
         }
 
         impl Into<Select> for Delete {

@@ -25,7 +25,7 @@ use command::common::{SetProperties, SetRegistry};
 use command::direct::create::{Strategy};
 use command::direct::delete::Delete;
 use command::direct::query::{Query, QueryResult};
-use command::direct::select::{Select, SubSelect};
+use command::direct::select::{Select};
 use config::bind::BindConfig;
 use config::Document;
 use loc::{Point, Surface, Uuid};

@@ -14,6 +14,12 @@ pub struct SubTypeDef<Part, SubType> {
     pub r#type: SubType,
 }
 
+impl <Part,SubType> ToString for SubTypeDef<Part,SubType> where Part: ToString, SubType: ToString {
+    fn to_string(&self) -> String {
+        todo!()
+    }
+}
+
 impl<Part, SubType, IsMatchPart, IsMatchSubType> IsMatch<SubTypeDef<Part, SubType>>
     for SubTypeDef<IsMatchPart, IsMatchSubType>
 where
@@ -66,6 +72,12 @@ where
     }
 }
 
+impl<Parent,Child> ToString for ParentChildDef<Parent,Child> where Parent: ToString, Child: ToString {
+    fn to_string(&self) -> String {
+        todo!()
+    }
+}
+
 impl<Parent, Child> Default for ParentChildDef<Parent, Child>
 where
     Parent: Default,
@@ -75,6 +87,12 @@ where
         Self {
             ..Default::default()
         }
+    }
+}
+
+impl Default for Kind {
+    fn default() -> Self {
+        todo!()
     }
 }
 
@@ -339,6 +357,7 @@ pub type KindSubTypes = SubTypeDef<KindCat, Option<CamelCase>>;
 pub type Kind = KindDef<KindSubTypes, Option<VariantFull>>;
 pub type ProtoKind = KindDef<Tw<CamelCaseSubTypes>, Tw<Option<ProtoVariant>>>;
 pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindCat>, OptPattern<CamelCase>>;
+
 
 impl ProtoKind {
     pub fn to_full(&self) -> Result<Kind, SpaceErr> {

@@ -49,7 +49,7 @@ use crate::command::direct::create::{
     PointTemplateVar, Require, Strategy, Template, TemplateVar,
 };
 use crate::command::direct::get::{Get, GetOp, GetVar};
-use crate::command::direct::select::{Select, SelectIntoSubstance, SelectKind, SelectVar};
+use crate::command::direct::select::{Select, SelectIntoSubstance, SelectVar};
 use crate::command::direct::set::{Set, SetVar};
 use crate::command::direct::CmdKind;
 use crate::command::CommandVar;
@@ -82,7 +82,7 @@ use crate::security::{
     AccessGrantKind, AccessGrantKindDef, ChildPerms, ParticlePerms, Permissions, PermissionsMask,
     PermissionsMaskKind, Privilege,
 };
-use crate::selector::{PointKindSeg, PointSegSelector};
+use crate::selector::{ExactPointSeg, PatternBlockVar, PointHierarchy, PointKindSeg, PointSegSelector, UploadBlock};
 use crate::selector::specific::{ProductSelector, ProductVariantSelector, VendorSelector};
 
 use crate::substance::Bin;
@@ -1166,6 +1166,12 @@ impl CamelCase {
     }
 }
 
+impl ToString for CamelCase {
+    fn to_string(&self) -> String {
+        self.string.clone()
+    }
+}
+
 impl FromStr for CamelCase {
     type Err = SpaceErr;
 
@@ -1777,7 +1783,6 @@ pub fn select<I: Span>(input: I) -> Res<I, SelectVar> {
             pattern: point_kind_pattern,
             properties: Default::default(),
             into_substance: SelectIntoSubstance::Stubs,
-            kind: SelectKind::Initial,
         };
         (next, select)
     })
@@ -5565,6 +5570,7 @@ pub fn kind_base<I: Span>(input: I) -> Res<I, KindCat> {
     }
 }
 
+/*
 pub fn resolve_kind<I: Span>(base: KindCat) -> impl FnMut(I) -> Res<I, Kind> {
     move |input: I| {
         let (next, sub) = context("kind-sub", camel_case)(input.clone())?;
@@ -5662,6 +5668,8 @@ pub fn resolve_kind<I: Span>(base: KindCat) -> impl FnMut(I) -> Res<I, Kind> {
         }
     }
 }
+
+ */
 
 pub fn kind_base_selector<I: Span>(input: I) -> Res<I, KindBaseSelector> {
     pattern(kind_base)(input)

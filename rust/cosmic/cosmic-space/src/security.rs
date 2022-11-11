@@ -501,10 +501,10 @@ pub enum GrantToDef<PointSelector> {
 }
 
 impl GrantTo {
-    pub fn is_match(&self, hierarchy: &PointHierarchy) -> Result<(), ()> {
+    pub fn is_match(&self, point: &Point) -> Result<(), ()> {
         match self {
             GrantTo::World => Ok(()),
-            GrantTo::PointSelector(selector) => match selector.matches(hierarchy) {
+            GrantTo::PointSelector(selector) => match selector.matches(point) {
                 true => Ok(()),
                 false => Err(()),
             },
