@@ -1070,7 +1070,7 @@ pub fn camel_case_chars<I: Span>(input: I) -> Res<I, I> {
 pub fn skewer_case_chars<I: Span>(input: I) -> Res<I, I> {
     recognize(tuple((
         is_a("abcdefghijklmnopqrstuvwxyz"),
-        many0(alt((alphanumeric1, tag("-")))),
+        many0(alt((lowercase_alphanumeric, tag("-")))),
     )))(input)
 }
 
