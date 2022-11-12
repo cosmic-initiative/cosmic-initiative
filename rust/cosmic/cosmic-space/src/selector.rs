@@ -11,17 +11,20 @@ use cosmic_nom::{new_span, Trace};
 use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector};
 
 use crate::kind::{Kind, ProtoKindSelector, Specific};
-use crate::point::{Layer, PointCtx, PointDef, PointSeg, PointSegCtx, PointSegment, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic, Variable, VarVal, Version};
+use crate::model::{CamelCase, Env};
 use crate::parse::error::result;
+use crate::parse::kind::specific_selector;
 use crate::parse::point_segment_selector;
+use crate::point::{
+    Layer, PointCtx, PointDef, PointSeg, PointSegCtx, PointSegVar, PointSegment, PointVar,
+    RouteSeg, ToBaseKind, Topic, VarVal, Variable, Version,
+};
 use crate::substance::{
     CallWithConfigDef, Substance, SubstanceFormat, SubstanceKind, SubstancePattern,
     SubstancePatternCtx, SubstancePatternDef,
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
-use crate::parse::kind::specific_selector;
-use crate::model::{CamelCase, Env};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct VersionReq {
@@ -110,7 +113,26 @@ pub enum PointSegSelector {
     Version(VersionReq),
 }
 
-impl PointSegment for PointSegSelector{
+impl PointSegSelector {
+    pub fn is_match(&self, segment: &PointSeg) -> bool {
+        match self {
+            PointSegSelector::InclusiveAny => true,
+            PointSegSelector::InclusiveRecursive => true,
+            PointSegSelector::Any => true,
+            PointSegSelector::Recursive => true,
+            PointSegSelector::Exact(exact) => exact.matches(segment),
+            PointSegSelector::Version(ver) => {
+                if let PointSeg::Version(version) = segment {
+                    ver.matches(version)
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
+impl PointSegment for PointSegSelector {
     fn file_sys_root() -> Self {
         Self::Exact(ExactPointSeg::PointSeg(PointSeg::FileSysRootDir))
     }
@@ -253,8 +275,6 @@ pub type SpecificSelector = SpecificSelectorDef<
     ProductVariantSelector,
     VersionReq,
 >;
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct SpecificSelectorDef<
@@ -612,7 +632,6 @@ impl ToString for PointKindSeg {
     }
 }
 
-
 pub type PayloadBlock = PayloadBlockDef<Point>;
 pub type PayloadBlockCtx = PayloadBlockDef<PointCtx>;
 pub type PayloadBlockVar = PayloadBlockDef<PointVar>;
@@ -701,7 +720,7 @@ impl ToResolved<PayloadBlock> for PayloadBlockVar {
     }
 }
 
-pub type PointSelector = PointDef<RouteSeg,PointSegSelector>;
+pub type PointSelector = PointDef<RouteSeg, PointSegSelector>;
 pub type PointSelectorCtx = PointSelectorDef<PointSegCtx>;
 pub type PointSelectorVar = PointSelectorDef<PointSegVar>;
 
@@ -710,6 +729,7 @@ pub struct PointSelectorDef<Seg> {
     pub route: RouteSeg,
     pub segments: Vec<Seg>,
 }
+
 impl ToResolved<PointSelector> for PointSelectorCtx {
     fn to_resolved(self, env: &Env) -> Result<PointSelector, SpaceErr> {
         todo!()
@@ -724,7 +744,40 @@ impl ToResolved<PointSelectorCtx> for PointSelectorVar {
 
 impl PointSelector {
     pub fn matches(&self, point: &Point) -> bool {
-        todo!()
+        if point.route != self.route {
+            return false;
+        }
+
+        if !point.segments.is_empty() {
+            let mut index = 0usize;
+            for seg in 0usize..((point.segments.len() - 1usize) as usize) {
+                if index >= self.segments.len() {
+                    return false;
+                }
+
+                let segment: &PointSeg = point.segments.get(seg.clone()).unwrap();
+                let selector: &PointSegSelector = self.segments.get(index.clone()).unwrap();
+
+                if !selector.is_match(segment) {
+                    return false;
+                }
+
+                if selector.is_recursive()
+                    && (index.clone() + 1 < self.segments.len())
+                    && (seg.clone() + 1usize) < point.segments.len()
+                {
+                    let next_segment: &PointSeg = point.segments.get(seg + 1).unwrap();
+                    let next_selector: &PointSegSelector =
+                        self.segments.get(index.clone() + 1).unwrap();
+                    if next_selector.is_match(next_segment) {
+                        index = index + 1usize;
+                    }
+                } else {
+                    index = index + 1usize;
+                }
+            }
+        }
+        true
     }
 }
 
