@@ -162,18 +162,19 @@ where
     point_def(
         point_route_segment,
         point_segment_selector,
-        filesys_point_segment_selector,
+        file_segment_selector,
     )(input)
 }
 
 #[cfg(test)]
 pub mod test {
     use crate::parse::error::result;
-    use crate::parse::point::point;
+    use crate::parse::point::{point, point_selector};
     use crate::parse::skewer_case;
     use crate::point::{Point, PointSeg};
     use cosmic_nom::new_span;
     use nom::combinator::all_consuming;
+    use crate::util::log;
 
     #[test]
     pub fn test_point() {
@@ -186,5 +187,17 @@ pub mod test {
         let skewer = result(skewer_case(new_span("xyzBad"))).unwrap();
 
         assert_eq!(skewer.to_string().as_str(), "xyz");
+    }
+
+
+    #[test]
+    pub fn test_selector() {
+        log(result(all_consuming(point_selector)(new_span("localhost")))).unwrap();
+        log(result(all_consuming(point_selector)(new_span("localhost:*")))).unwrap();
+        log(result(all_consuming(point_selector)(new_span("localhost:*:bye")))).unwrap();
+        log(result(all_consuming(point_selector)(new_span("localhost:**:(^1.0.0)")))).unwrap();
+        log(result(all_consuming(point_selector)(new_span("localhost:some:/dir/file.txt")))).unwrap();
+        log(result(all_consuming(point_selector)(new_span("localhost:some:/dir/*")))).unwrap();
+
     }
 }
