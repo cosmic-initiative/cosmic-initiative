@@ -5908,7 +5908,7 @@ pub mod cmd_test {
         command, create_command, publish_command, script, upload_blocks,
     };
     use crate::util::ToResolved;
-    use crate::{BaseKind, KindTemplate, SetProperties};
+    use crate::{ SetProperties};
     use crate::model::CamelCase;
 
     /*
@@ -5945,23 +5945,7 @@ pub mod cmd_test {
         Ok(())
     }
 
-    #[test]
-    pub fn test_kind() -> Result<(), SpaceErr> {
-        let input = "create localhost:users<UserBase<Keycloak>>";
-        let (_, command) = command(new_span(input))?;
-        match command {
-            CommandVar::Create(create) => {
-                assert_eq!(
-                    create.template.kind.sub,
-                    Some(CamelCase::from_str("Keycloak").unwrap())
-                );
-            }
-            _ => {
-                panic!("expected create command")
-            }
-        }
-        Ok(())
-    }
+
 
     #[test]
     pub fn test_script() -> Result<(), SpaceErr> {
@@ -6004,24 +5988,6 @@ pub mod cmd_test {
         Ok(())
     }
 
-    #[test]
-    pub fn test_create_kind() -> Result<(), SpaceErr> {
-        let input = r#"create localhost:repo:tutorial:1.0.0<Repo>"#;
-        let mut command = result(create_command(new_span(input)))?;
-        let command = command.collapse()?;
-        if let Command::Create(create) = command {
-            let kind = KindTemplate {
-                base: BaseKind::Repo,
-                sub: None,
-                specific: None,
-            };
-            assert_eq!(create.template.kind, kind);
-        } else {
-            assert!(false);
-        }
-
-        Ok(())
-    }
 
     #[test]
     pub fn test_create_properties() -> Result<(), SpaceErr> {
