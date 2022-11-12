@@ -49,7 +49,8 @@ use regex::{Captures, Error, Match, Regex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, span_with_extra, Trace};
-use cosmic_nom::{trim, tw, Res, Span, Wrap};
+use cosmic_nom::{Res, Span, trim, tw, Wrap};
+use kind::{kind_selector, proto_kind};
 
 use crate::command::common::{PropertyMod, SetProperties, StateSrc, StateSrcVar};
 use crate::command::direct::create::{
@@ -69,13 +70,12 @@ use crate::config::mechtron::MechtronConfig;
 use crate::config::Document;
 use crate::err::report::{Label, Report, ReportKind};
 use crate::err::{ParseErrs, SpaceErr};
-use crate::kind::parse::{kind_selector, proto_kind};
 use crate::kind::{Kind, KindCat, KindSelector, Pattern, Specific};
 use crate::point::parse::point_selector_var;
 use crate::point::StarKey;
 use crate::point::{
-    Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegVar, PointSegment,
-    PointVar, RouteSeg, RouteSegVar, Surface, Topic, Uuid, VarVal, Variable, Version,
+    Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegment, PointSegVar,
+    PointVar, RouteSeg, RouteSegVar, Surface, Topic, Uuid, Variable, VarVal, Version,
 };
 use crate::model::{CamelCase, Domain, SkewerCase};
 use crate::parse::error::{find_parse_err, result};
@@ -2918,9 +2918,9 @@ pub mod model {
     use crate::model::Env;
     use crate::parse::error::result;
     use crate::parse::{
-        camel_case_chars, filepath_chars, http_method, lex_child_scopes, method_kind, pipeline,
-        rc_command_type, value_pattern, wrapped_cmd_method, wrapped_ext_method,
-        wrapped_http_method, wrapped_sys_method, Assignment, CtxResolver, ResolverErr, SubstParser,
+        Assignment, camel_case_chars, CtxResolver, filepath_chars, http_method, lex_child_scopes,
+        method_kind, pipeline, rc_command_type, ResolverErr,
+        SubstParser, value_pattern, wrapped_cmd_method, wrapped_ext_method, wrapped_http_method, wrapped_sys_method,
     };
     use crate::util::{HttpMethodPattern, StringMatcher, ToResolved, ValueMatcher, ValuePattern};
     use crate::wave::core::http2::HttpMethod;
@@ -4213,13 +4213,13 @@ pub mod error {
     use nom::multi::{many0, many1, separated_list0};
     use nom::sequence::{delimited, pair, preceded, terminated, tuple};
     use nom::{
-        AsChar, Compare, Err, IResult, InputLength, InputTake, InputTakeAtPosition, Parser, Slice,
+        AsChar, Compare, Err, InputLength, InputTake, InputTakeAtPosition, IResult, Parser, Slice,
     };
     use nom_supreme::error::{BaseErrorKind, ErrorTree, StackContext};
     use regex::internal::Input;
     use regex::{Error, Regex};
 
-    use cosmic_nom::{len, new_span, span_with_extra, trim, tw, Res, Span};
+    use cosmic_nom::{len, new_span, Res, Span, span_with_extra, trim, tw};
 
     use crate::command::direct::CmdKind;
     use crate::command::CommandVar;
@@ -4237,8 +4237,8 @@ pub mod error {
         camel_case_to_string_matcher, domain, file_chars, filepath_chars, get, lex_child_scopes,
         lex_root_scope, lex_route_selector, lex_scopes, lowercase_alphanumeric, method_kind,
         nospace1, parse_uuid, point_segment_chars, point_var, rec_version, select, set, skewer,
-        skewer_case, skewer_chars, subst_path, unwrap_block, variable_name, version_chars,
-        version_req_chars, SubstParser,
+        skewer_case, skewer_chars, subst_path, SubstParser, unwrap_block, variable_name,
+        version_chars, version_req_chars,
     };
     use crate::particle::PointKindVar;
     use crate::selector::{UploadBlock, VersionReq};
@@ -5860,7 +5860,7 @@ pub mod cmd_test {
     use core::str::FromStr;
 
     use nom::error::{VerboseError, VerboseErrorKind};
-    use nom_supreme::final_parser::{final_parser, ExtractContext};
+    use nom_supreme::final_parser::{ExtractContext, final_parser};
 
     use cosmic_nom::{new_span, Res};
 

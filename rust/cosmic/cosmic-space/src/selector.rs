@@ -23,7 +23,7 @@ use crate::substance::{
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
-use crate::kind::parse::specific_selector;
+use crate::parse::kind::specific_selector;
 use crate::model::{CamelCase, Env};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
