@@ -743,14 +743,14 @@ impl ToResolved<PointSelectorCtx> for PointSelectorVar {
 }
 
 impl PointSelector {
-    pub fn matches(&self, point: &Point) -> bool {
+    pub fn is_match(&self, point: &Point) -> bool {
         if point.route != self.route {
             return false;
         }
 
         if !point.segments.is_empty() {
             let mut index = 0usize;
-            for seg in 0usize..((point.segments.len() - 1usize) as usize) {
+            for seg in 0usize..point.segments.len() {
                 if index >= self.segments.len() {
                     return false;
                 }

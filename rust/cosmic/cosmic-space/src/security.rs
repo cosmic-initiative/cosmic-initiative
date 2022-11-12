@@ -505,7 +505,7 @@ impl GrantTo {
     pub fn is_match(&self, point: &Point) -> Result<(), ()> {
         match self {
             GrantTo::World => Ok(()),
-            GrantTo::PointSelector(selector) => match selector.matches(point) {
+            GrantTo::PointSelector(selector) => match selector.is_match(point) {
                 true => Ok(()),
                 false => Err(()),
             },

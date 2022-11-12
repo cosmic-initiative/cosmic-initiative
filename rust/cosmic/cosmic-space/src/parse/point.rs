@@ -174,6 +174,7 @@ pub mod test {
     use crate::point::{Point, PointSeg};
     use cosmic_nom::new_span;
     use nom::combinator::all_consuming;
+    use crate::selector::PointSelector;
     use crate::util::log;
 
     #[test]
@@ -198,6 +199,18 @@ pub mod test {
         log(result(all_consuming(point_selector)(new_span("localhost:**:(^1.0.0)")))).unwrap();
         log(result(all_consuming(point_selector)(new_span("localhost:some:/dir/file.txt")))).unwrap();
         log(result(all_consuming(point_selector)(new_span("localhost:some:/dir/*")))).unwrap();
-
     }
+
+    #[test]
+    pub fn test_selector2() {
+        {
+            let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
+            let p2= result(all_consuming(point)(new_span("otherhost"))).unwrap();
+            let selector : PointSelector= log(result(all_consuming(point_selector)(new_span("localhost")))).unwrap();
+            assert!(selector.is_match(&p1));
+            assert!(!selector.is_match(&p2));
+        }
+    }
+
+
 }
