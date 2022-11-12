@@ -4,55 +4,7 @@ use nom::bytes::complete::tag;
 use nom::combinator::{eof, opt, value};
 use nom::branch::alt;
 use crate::kind::{CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef, Pattern, ProtoKind, ProtoKindSelector, ProtoVariant, ProtoVariantSelector, Specific, SpecificDef, SpecificFullSelector, SpecificSelector, SpecificSubTypes, SpecificSubTypesSelector, SubTypeDef, VariantDef};
-use crate::parse::{camel_case, domain, skewer_case, version, version_req};
-
-pub fn pattern<I, FnX, X>(mut f: FnX) -> impl FnMut(I) -> Res<I, Pattern<X>> + Copy
-where
-    I: Span,
-    FnX: FnMut(I) -> Res<I, X> + Copy,
-    X: Clone,
-{
-    move |input| {
-        alt((
-            value(Pattern::Any, tag("*")),
-            value(Pattern::None, tag("!")),
-            |i| f(i).map(|(next, x)| (next, Pattern::Matches(x))),
-        ))(input)
-    }
-}
-
-pub fn opt_pattern<I, FnX, X>(mut f: FnX) -> impl FnMut(I) -> Res<I, OptPattern<X>> + Copy
-where
-    I: Span,
-    FnX: FnMut(I) -> Res<I, X> + Copy,
-    X: Clone,
-{
-    move |input| {
-        alt((
-            value(OptPattern::Any, tag("*")),
-            value(OptPattern::None, tag("!")),
-            value(OptPattern::None, eof),
-            |i| f(i).map(|(next, x)| (next, OptPattern::Matches(x))),
-        ))(input)
-    }
-}
-
-pub fn preceded_opt_pattern<I, FnX, X, FnPrec>(
-    prec: FnPrec,
-    mut f: FnX,
-) -> impl FnMut(I) -> Res<I, OptPattern<X>> + Copy
-where
-    I: Span,
-    FnX: FnMut(I) -> Res<I, X> + Copy,
-    X: Clone,
-    FnPrec: FnMut(I) -> Res<I, I> + Copy,
-{
-    move |input| {
-        alt((preceded(prec, opt_pattern(f)), |i| {
-            Ok((i, OptPattern::None))
-        }))(input)
-    }
-}
+use crate::parse::{camel_case, domain, skewer_case, util, version, version_req};
 
 fn sub_types<I, FnPart, Part, FnCamel, Camel>(
     fn_part: FnPart,
@@ -143,9 +95,9 @@ where
     I: Span,
 {
     specific_def(
-        pattern(domain),
-        pattern(skewer_case),
-        pattern(|i| delimited(tag("("), version_req, tag(")"))(i)),
+        util::pattern(domain),
+        util::pattern(skewer_case),
+        util::pattern(|i| delimited(tag("("), version_req, tag(")"))(i)),
     )(input)
 }
 
@@ -154,8 +106,8 @@ where
     I: Span,
 {
     variant_def(
-        |i| tw(pattern(camel_case_sub_types_selector))(i),
-        |i| tw(|i| opt(child(pattern(specific_selector)))(i))(i),
+        |i| tw(util::pattern(camel_case_sub_types_selector))(i),
+        |i| tw(|i| opt(child(util::pattern(specific_selector)))(i))(i),
     )(input)
     .map(|(next, variant)| {
         let child = match &variant.child.w {
@@ -182,8 +134,8 @@ where
     I: Span,
 {
     variant_def(
-        |i| tw(pattern(camel_case_sub_types_selector))(i),
-        |i| tw(|i| opt(child(pattern(variant_selector)))(i))(i),
+        |i| tw(util::pattern(camel_case_sub_types_selector))(i),
+        |i| tw(|i| opt(child(util::pattern(variant_selector)))(i))(i),
     )(input)
     .map(|(next, kind)| {
         let child = match &kind.child.w {
@@ -210,8 +162,8 @@ where
     I: Span,
 {
     sub_types(
-        pattern(specific_selector),
-        preceded_opt_pattern(|i| tag(":")(i), camel_case),
+        util::pattern(specific_selector),
+        util::preceded_opt_pattern(|i| tag(":")(i), camel_case),
     )(input)
 }
 
@@ -221,7 +173,7 @@ where
 {
     sub_types(
         specific_selector,
-        preceded_opt_pattern(|i| tag(":")(i), camel_case), //                  preceded_opt_pattern(|i|tag(":")(i), camel_case),
+        util::preceded_opt_pattern(|i| tag(":")(i), camel_case), //                  preceded_opt_pattern(|i|tag(":")(i), camel_case),
     )(input)
 }
 
@@ -261,8 +213,8 @@ where
     I: Span,
 {
     sub_types(
-        pattern(camel_case),
-        preceded_opt_pattern(|i| tag(":")(i), camel_case),
+        util::pattern(camel_case),
+        util::preceded_opt_pattern(|i| tag(":")(i), camel_case),
     )(input)
 }
 

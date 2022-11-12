@@ -272,20 +272,6 @@ pub fn space_no_dupe_dots<I: Span>(input: I) -> Res<I, ()> {
     .map(|(next, _)| (next, ()))
 }
 
-pub fn space_point_segment<I: Span>(input: I) -> Res<I, PointSeg> {
-    context(
-        "point:space_segment",
-        cut(pair(
-            recognize(tuple((
-                context("point:space_segment_leading", peek(alpha1)),
-                space_no_dupe_dots,
-                space_chars,
-            ))),
-            mesh_eos,
-        )),
-    )(input)
-    .map(|(next, (space, x))| (next, PointSeg::Space(space.to_string())))
-}
 
 pub fn base_point_segment<I: Span>(input: I) -> Res<I, PointSeg> {
     preceded(
@@ -333,7 +319,7 @@ pub fn dir_point_segment<I: Span>(input: I) -> Res<I, PointSeg> {
 
 pub fn root_dir_point_segment<I: Span>(input: I) -> Res<I, PointSeg> {
     context("point:root_filesystem_segment", tag(":/"))(input)
-        .map(|(next, _)| (next, PointSeg::FilesystemRootDir))
+        .map(|(next, _)| (next, PointSeg::FileSysRootDir))
 }
 
 pub fn root_dir_point_segment_ctx<I: Span>(input: I) -> Res<I, PointSegVar> {
@@ -504,7 +490,7 @@ pub fn point_non_root_var<I: Span>(input: I) -> Res<I, PointVar> {
                 "point_route",
                 opt(terminated(var_route(point_route_segment), tag("::"))),
             ),
-            var_seg(root_ctx_seg(space_point_segment)),
+
             many0(base_seg(var_seg(pop(base_point_segment)))),
             opt(base_seg(var_seg(pop(version_point_segment)))),
             opt(tuple((
@@ -520,11 +506,10 @@ pub fn point_non_root_var<I: Span>(input: I) -> Res<I, PointVar> {
         )),
     )(input)
     .map(
-        |(next, (route, space, mut bases, version, filesystem, _))| {
+        |(next, (route,  mut bases, version, filesystem, _))| {
             let route = route.unwrap_or(RouteSegVar::This);
             let mut segments = vec![];
             let mut bases: Vec<PointSegVar> = bases;
-            segments.push(space);
             segments.append(&mut bases);
             match version {
                 None => {}
@@ -4505,16 +4490,7 @@ fn recursive_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
     tag("**")(input).map(|(next, _)| (next, PointSegSelector::Recursive))
 }
 
-fn exact_space_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
-    point_segment_chars(input).map(|(next, segment)| {
-        (
-            next,
-            PointSegSelector::Exact(ExactPointSeg::PointSeg(PointSeg::Space(
-                segment.to_string(),
-            ))),
-        )
-    })
-}
+
 
 fn exact_base_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
     point_segment_chars(input).map(|(next, segment)| {
@@ -4569,7 +4545,6 @@ pub fn point_segment_selector<I: Span>(input: I) -> Res<I, PointSegSelector> {
         inclusive_any_segment,
         recursive_segment,
         any_segment,
-        exact_space_segment,
     ))(input)
 }
 

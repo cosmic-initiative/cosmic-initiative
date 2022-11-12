@@ -2477,7 +2477,7 @@ impl Recipients {
             Recipients::Stars => {
                 if let RouteSeg::Star(_) = point.route {
                     if point.segments.len() == 1
-                        && *point.segments.first().unwrap() == PointSeg::Space("star".to_string())
+                        && *point.segments.first().unwrap() == PointSeg::Base("star".to_string())
                     {
                         true
                     } else {

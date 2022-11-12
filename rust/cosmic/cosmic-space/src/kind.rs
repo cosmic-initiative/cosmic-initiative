@@ -697,7 +697,8 @@ pub mod parse {
         use nom::combinator::{all_consuming, opt};
         use nom::sequence::{delimited, pair, preceded};
         use crate::model::CamelCase;
-        use crate::parse::kind::{camel_case_sub_types, camel_case_sub_types_selector, kind_selector, opt_pattern, pattern, preceded_opt_pattern, proto_kind, proto_variant, specific, specific_full_selector, specific_selector, specific_sub_types, variant_selector};
+        use crate::parse::kind::{camel_case_sub_types, camel_case_sub_types_selector, kind_selector, proto_kind, proto_variant, specific, specific_full_selector, specific_selector, specific_sub_types, variant_selector};
+        use crate::parse::util::{opt_pattern, pattern, preceded_opt_pattern};
 
         #[test]
         pub fn test_camel_case_subtypes() {

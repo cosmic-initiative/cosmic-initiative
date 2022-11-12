@@ -25,6 +25,7 @@ use crate::wave::exchange::asynch::Exchanger;
 use crate::wave::{Agent, DirectedWave, Ping, Pong, Recipients, ReflectedWave, SingularDirectedWave, ToRecipients, UltraWave, Wave};
 use crate::Agent::Anonymous;
 use crate::{ANONYMOUS, HYPERUSER};
+use crate::config::bind::RouteSelector;
 use crate::kind::KindCat;
 use crate::model::{CamelCase, Domain, Env, SkewerCase};
 
@@ -207,6 +208,12 @@ pub enum RouteSeg {
     Star(String),
 }
 
+impl Default for RouteSeg {
+    fn default() -> Self {
+        Self::This
+    }
+}
+
 impl RouteSegQuery for RouteSeg {
     fn is_local(&self) -> bool {
         match self {
@@ -333,6 +340,10 @@ impl ToString for RouteSeg {
             RouteSeg::Remote => "REMOTE".to_string(),
         }
     }
+}
+
+pub trait PointSegRootFileSys {
+  fn root_fs(&self) -> Self;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, strum_macros::Display)]
@@ -499,16 +510,15 @@ pub trait PointSegQuery {
 impl PointSegQuery for PointSeg {
     fn is_filesystem_root(&self) -> bool {
         match self {
-            Self::FilesystemRootDir => true,
+            Self::FileSysRootDir => true,
             _ => false,
         }
     }
     fn kind(&self) -> PointSegKind {
         match self {
             PointSeg::Root => PointSegKind::Root,
-            PointSeg::Space(_) => PointSegKind::Space,
             PointSeg::Base(_) => PointSegKind::Base,
-            PointSeg::FilesystemRootDir => PointSegKind::FilesystemRootDir,
+            PointSeg::FileSysRootDir => PointSegKind::FilesystemRootDir,
             PointSeg::Dir(_) => PointSegKind::Dir,
             PointSeg::File(_) => PointSegKind::File,
             PointSeg::Version(_) => PointSegKind::Version,
@@ -527,7 +537,6 @@ impl PointSegQuery for PointSegCtx {
     fn kind(&self) -> PointSegKind {
         match self {
             Self::Root => PointSegKind::Root,
-            Self::Space(_) => PointSegKind::Space,
             Self::Base(_) => PointSegKind::Base,
             Self::FilesystemRootDir => PointSegKind::FilesystemRootDir,
             Self::Dir(_) => PointSegKind::Dir,
@@ -550,7 +559,6 @@ impl PointSegQuery for PointSegVar {
     fn kind(&self) -> PointSegKind {
         match self {
             Self::Root => PointSegKind::Root,
-            Self::Space(_) => PointSegKind::Space,
             Self::Base(_) => PointSegKind::Base,
             Self::FilesystemRootDir => PointSegKind::FilesystemRootDir,
             Self::Dir(_) => PointSegKind::Dir,
@@ -566,7 +574,6 @@ impl PointSegQuery for PointSegVar {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum PointSegCtx {
     Root,
-    Space(String),
     Base(String),
     FilesystemRootDir,
     Dir(String),
@@ -579,7 +586,6 @@ pub enum PointSegCtx {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum PointSegVar {
     Root,
-    Space(String),
     Base(String),
     FilesystemRootDir,
     Dir(String),
@@ -594,7 +600,6 @@ impl ToString for PointSegVar {
     fn to_string(&self) -> String {
         match self {
             PointSegVar::Root => "".to_string(),
-            PointSegVar::Space(space) => space.clone(),
             PointSegVar::Base(base) => base.clone(),
             PointSegVar::FilesystemRootDir => "/".to_string(),
             PointSegVar::Dir(dir) => dir.clone(),
@@ -621,7 +626,6 @@ impl Into<PointSegVar> for PointSegCtx {
     fn into(self) -> PointSegVar {
         match self {
             PointSegCtx::Root => PointSegVar::Root,
-            PointSegCtx::Space(space) => PointSegVar::Space(space),
             PointSegCtx::Base(base) => PointSegVar::Base(base),
             PointSegCtx::FilesystemRootDir => PointSegVar::FilesystemRootDir,
             PointSegCtx::Dir(dir) => PointSegVar::Dir(dir),
@@ -639,7 +643,6 @@ impl TryInto<PointSegCtx> for PointSegVar {
     fn try_into(self) -> Result<PointSegCtx, Self::Error> {
         match self {
             PointSegVar::Root => Ok(PointSegCtx::Root),
-            PointSegVar::Space(space) => Ok(PointSegCtx::Space(space)),
             PointSegVar::Base(base) => Ok(PointSegCtx::Base(base)),
             PointSegVar::FilesystemRootDir => Ok(PointSegCtx::FilesystemRootDir),
             PointSegVar::Dir(dir) => Ok(PointSegCtx::Dir(dir)),
@@ -673,9 +676,8 @@ impl TryInto<PointSeg> for PointSegCtx {
     fn try_into(self) -> Result<PointSeg, Self::Error> {
         match self {
             PointSegCtx::Root => Ok(PointSeg::Root),
-            PointSegCtx::Space(space) => Ok(PointSeg::Space(space)),
             PointSegCtx::Base(base) => Ok(PointSeg::Base(base)),
-            PointSegCtx::FilesystemRootDir => Ok(PointSeg::FilesystemRootDir),
+            PointSegCtx::FilesystemRootDir => Ok(PointSeg::FileSysRootDir),
             PointSegCtx::Dir(dir) => Ok(PointSeg::Dir(dir)),
             PointSegCtx::File(file) => Ok(PointSeg::File(file)),
             PointSegCtx::Version(version) => Ok(PointSeg::Version(version)),
@@ -705,32 +707,45 @@ impl PointSegCtx {
     }
 }
 
-pub trait PointSegment {}
+pub trait PointSegment {
+    fn file_sys_root() -> Self;
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum PointSeg {
     Root,
-    Space(String),
     Base(String),
-    FilesystemRootDir,
+    FileSysRootDir,
     Dir(String),
     File(String),
     Version(Version),
 }
 
-impl PointSegment for PointSeg {}
 
-impl PointSegment for PointSegCtx {}
+impl PointSegment for PointSeg {
+    fn file_sys_root() -> Self {
+        Self::FileSysRootDir
+    }
+}
 
-impl PointSegment for PointSegVar {}
+impl PointSegment for PointSegCtx {
+    fn file_sys_root() -> Self {
+        Self::FilesystemRootDir
+    }
+}
+
+impl PointSegment for PointSegVar {
+    fn file_sys_root() -> Self {
+        Self::FilesystemRootDir
+    }
+}
 
 impl Into<PointSegCtx> for PointSeg {
     fn into(self) -> PointSegCtx {
         match self {
             PointSeg::Root => PointSegCtx::Root,
-            PointSeg::Space(space) => PointSegCtx::Space(space),
             PointSeg::Base(base) => PointSegCtx::Base(base),
-            PointSeg::FilesystemRootDir => PointSegCtx::FilesystemRootDir,
+            PointSeg::FileSysRootDir => PointSegCtx::FilesystemRootDir,
             PointSeg::Dir(dir) => PointSegCtx::Dir(dir),
             PointSeg::File(file) => PointSegCtx::File(file),
             PointSeg::Version(version) => PointSegCtx::Version(version),
@@ -762,12 +777,11 @@ impl PointSeg {
 impl ToString for PointSeg {
     fn to_string(&self) -> String {
         match self {
-            PointSeg::Space(space) => space.clone(),
             PointSeg::Base(base) => base.clone(),
             PointSeg::Dir(dir) => dir.clone(),
             PointSeg::File(file) => file.clone(),
             PointSeg::Version(version) => version.to_string(),
-            PointSeg::FilesystemRootDir => "/".to_string(),
+            PointSeg::FileSysRootDir => "/".to_string(),
             PointSeg::Root => "".to_string(),
         }
     }
@@ -1383,7 +1397,6 @@ impl ToResolved<Point> for PointCtx {
                 PointSegCtx::Root => {
                     //segments.push(PointSeg::Root)
                 }
-                PointSegCtx::Space(space) => point = point.push(space.clone())?,
                 PointSegCtx::Base(base) => point = point.push(base.clone())?,
                 PointSegCtx::Dir(dir) => point = point.push(dir.clone())?,
                 PointSegCtx::File(file) => point = point.push(file.clone())?,
@@ -1626,7 +1639,7 @@ impl Point {
     pub fn has_filesystem(&self) -> bool {
         for segment in &self.segments {
             match segment {
-                PointSeg::FilesystemRootDir => {
+                PointSeg::FileSysRootDir => {
                     return true;
                 }
                 _ => {}
@@ -1680,13 +1693,10 @@ impl Point {
             let last = self.last_segment().expect("expected last segment");
             let point = match last {
                 PointSeg::Root => segment,
-                PointSeg::Space(_) => {
-                    format!("{}:{}", self.to_string(), segment)
-                }
                 PointSeg::Base(_) => {
                     format!("{}:{}", self.to_string(), segment)
                 }
-                PointSeg::FilesystemRootDir => {
+                PointSeg::FileSysRootDir => {
                     format!("{}{}", self.to_string(), segment)
                 }
                 PointSeg::Dir(_) => {
@@ -1727,7 +1737,7 @@ impl Point {
         let mut path = String::new();
         for segment in &self.segments {
             match segment {
-                PointSeg::FilesystemRootDir => {
+                PointSeg::FileSysRootDir => {
                     path.push_str("/");
                 }
                 PointSeg::Dir(dir) => {

@@ -586,7 +586,7 @@ impl ToString for PointHierarchy {
 
         let mut post_fileroot = false;
         for (index, segment) in self.segments.iter().enumerate() {
-            if let PointSeg::FilesystemRootDir = segment.segment {
+            if let PointSeg::FileSysRootDir = segment.segment {
                 post_fileroot = true;
             }
             rtn.push_str(segment.segment.preceding_delim(post_fileroot));
