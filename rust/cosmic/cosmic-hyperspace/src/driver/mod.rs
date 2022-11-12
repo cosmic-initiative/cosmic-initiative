@@ -22,7 +22,7 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Assign, HyperSubstance, ParticleLocation, ParticleRecord};
-use cosmic_space::loc::{Layer, Point, Surface, ToPoint, ToSurface};
+use cosmic_space::point::{Layer, Point, Surface, ToPoint, ToSurface};
 use cosmic_space::log::{PointLogger, Tracker};
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::traversal::{
@@ -1090,7 +1090,7 @@ impl<P> TraversalLayer for ItemOuter<P>
 where
     P: Cosmos,
 {
-    fn surface(&self) -> cosmic_space::loc::Surface {
+    fn surface(&self) -> cosmic_space::point::Surface {
         self.surface.clone()
     }
 

@@ -19,7 +19,7 @@ use cosmic_space::command::RawCommand;
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{ControlPattern, Greet, InterchangeKind};
-use cosmic_space::loc::{Layer, Point, PointFactory, Surface, ToSurface};
+use cosmic_space::point::{Layer, Point, PointFactory, Surface, ToSurface};
 use cosmic_space::log::{RootLogger, Tracker};
 use cosmic_space::particle::traversal::Traversal;
 use cosmic_space::selector::ProtoKindSelector;

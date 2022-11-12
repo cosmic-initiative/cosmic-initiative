@@ -14,7 +14,7 @@ use dashmap::DashMap;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::config::bind::RouteSelector;
-use crate::loc::{ToPoint, ToSurface, Topic};
+use crate::point::{ToPoint, ToSurface, Topic};
 use crate::log::{PointLogger, RootLogger, SpanLogger};
 use crate::settings::Timeouts;
 use crate::wave::core::cmd::CmdMethod;

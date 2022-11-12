@@ -38,7 +38,7 @@ use cosmic_space::command::direct::select::{Select, SelectIntoSubstance, SelectK
 use cosmic_space::command::direct::set::Set;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Location, ParticleLocation, ParticleRecord};
-use cosmic_space::loc::{Point, PointSeg, StarKey, ToBaseKind, Version};
+use cosmic_space::point::{Point, PointSeg, StarKey, ToBaseKind, Version};
 use cosmic_space::log::PointLogger;
 use cosmic_space::particle::{Details, PointKind, Properties, Property, Status, Stub};
 use cosmic_space::security::{
@@ -1612,7 +1612,7 @@ pub mod test {
     use cosmic_space::command::direct::select::{Select, SelectIntoSubstance, SelectKind};
     use cosmic_space::hyper::ParticleLocation;
     use cosmic_space::kind::{Kind, Specific, StarSub, UserBaseSubKind};
-    use cosmic_space::loc::{MachineName, Point, StarKey, ToPoint};
+    use cosmic_space::point::{MachineName, Point, StarKey, ToPoint};
     use cosmic_space::log::RootLogger;
     use cosmic_space::particle::property::PropertiesConfig;
     use cosmic_space::particle::Status;

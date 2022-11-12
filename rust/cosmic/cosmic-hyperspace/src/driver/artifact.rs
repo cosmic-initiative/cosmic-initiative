@@ -18,7 +18,7 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Assign, HyperSubstance, ParticleLocation};
-use cosmic_space::loc::{Point, ToBaseKind};
+use cosmic_space::point::{Point, ToBaseKind};
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::PointKind;
 use cosmic_space::selector::ProtoKindSelector;

@@ -6,7 +6,7 @@ use url::Url;
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::config::bind::{BindConfig, PipelineStepVar, PipelineStopVar};
 use cosmic_space::err::{CoreReflector, SpaceErr, StatusErr};
-use cosmic_space::loc::{Layer, Point, Surface, ToSurface};
+use cosmic_space::point::{Layer, Point, Surface, ToSurface};
 use cosmic_space::log::{PointLogger, Trackable};
 use cosmic_space::model::{Env, RegexCapturesResolver};
 use cosmic_space::parse::model::{PipelineSegmentVar, PipelineVar};

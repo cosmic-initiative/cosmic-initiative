@@ -1,6 +1,6 @@
 use crate::err::ParseErrs;
 use crate::err::SpaceErr;
-use crate::loc::Version;
+use crate::point::Version;
 use crate::selector::VersionReq;
 use cosmic_nom::Tw;
 use serde::{Deserialize, Serialize};
@@ -664,7 +664,7 @@ pub type KindSelector =
 
 pub mod parse {
 
-    use crate::kind2::{
+    use crate::kind::{
         CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef,
         Pattern, ProtoKind, ProtoKindSelector, ProtoVariant, ProtoVariantSelector, Specific,
         SpecificDef, SpecificFullSelector, SpecificSelector, SpecificSubTypes,
@@ -970,12 +970,12 @@ pub mod parse {
 
     #[cfg(test)]
     pub mod test {
-        use crate::kind2::parse::{
+        use crate::kind::parse::{
             camel_case_sub_types, camel_case_sub_types_selector, kind_selector, opt_pattern,
             pattern, preceded_opt_pattern, proto_kind, proto_variant, specific,
             specific_full_selector, specific_selector, specific_sub_types, variant_selector,
         };
-        use crate::kind2::{IsMatch, OptPattern, Pattern};
+        use crate::kind::{IsMatch, OptPattern, Pattern};
 
         use crate::err::SpaceErr;
         use crate::parse::error::result;
@@ -1173,12 +1173,12 @@ pub mod parse {
 
 #[cfg(test)]
 pub mod test {
-    use crate::kind2::{
+    use crate::kind::{
         Artifact, DomainSelector, IsMatch, KindCat, OptPattern, Pattern, SkewerSelector, Specific,
         SpecificSelector, SpecificSubTypes, SubTypeDef, Variant, VariantFull, VariantSelector,
         VersionSelector,
     };
-    use crate::loc::Version;
+    use crate::point::Version;
     use crate::selector::VersionReq;
     use core::str::FromStr;
     use crate::model::{CamelCase, Domain, SkewerCase};

@@ -5,10 +5,10 @@ use std::ops::Deref;
 use validator::validate_email;
 
 use crate::command::common::PropertyMod;
-use crate::loc::Point;
+use crate::point::Point;
 use crate::model::SkewerCase;
 use crate::{SetProperties, SpaceErr};
-use crate::kind2::KindCat;
+use crate::kind::KindCat;
 
 pub struct PropertyDef {
     pub pattern: Box<dyn PropertyPattern>,

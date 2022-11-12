@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::err::SpaceErr;
-use crate::loc::Meta;
+use crate::point::Meta;
 use crate::substance::{FormErrs, Substance};
 use crate::util::ValueMatcher;
 use crate::wave::core::{DirectedCore, HeaderMap, Method, ReflectedCore};

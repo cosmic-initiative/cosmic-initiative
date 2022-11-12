@@ -13,7 +13,7 @@ use cosmic_nom::Tw;
 use crate::command::{Command, RawCommand};
 use crate::err::ParseErrs;
 use crate::hyper::{Greet, HyperSubstance, Knock, ParticleLocation};
-use crate::loc::{Meta, PointCtx, PointVar};
+use crate::point::{Meta, PointCtx, PointVar};
 use crate::log::{AuditLog, Log, LogSpan, LogSpanEvent, PointlessLog};
 use crate::parse::model::Subst;
 use crate::model::Env;

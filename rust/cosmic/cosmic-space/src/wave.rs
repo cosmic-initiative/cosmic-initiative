@@ -24,8 +24,8 @@ use crate::config::bind::RouteSelector;
 use crate::err::{CoreReflector, SpaceErr, StatusErr};
 use crate::hyper::AssignmentKind;
 use crate::hyper::InterchangeKind::DefaultControl;
-use crate::loc::StarKey;
-use crate::loc::{
+use crate::point::StarKey;
+use crate::point::{
     Layer, Point, PointSeg, RouteSeg, Surface, SurfaceSelector, ToPoint, ToSurface, Topic, Uuid,
 };
 use crate::log::{

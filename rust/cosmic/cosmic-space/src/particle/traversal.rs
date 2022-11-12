@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::loc::Layer;
+use crate::point::Layer;
 use crate::log::{SpanLogger, Trackable};
 use crate::wave::exchange::asynch::Exchanger;
 use crate::wave::{DirectedWave, Ping, Pong, ReflectedWave, SingularDirectedWave, UltraWave, Wave};

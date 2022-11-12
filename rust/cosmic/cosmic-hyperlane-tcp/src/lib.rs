@@ -571,7 +571,7 @@ mod tests {
     use cosmic_hyperlane::test_util::{
         LargeFrameTest, SingleInterchangePlatform, WaveTest, FAE, LESS,
     };
-    use cosmic_space::loc::{Point, ToSurface};
+    use cosmic_space::point::{Point, ToSurface};
     use cosmic_space::log::RootLogger;
 
     use chrono::DateTime;

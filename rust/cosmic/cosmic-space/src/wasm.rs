@@ -1,4 +1,4 @@
-use crate::loc;
+use crate::point;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -19,5 +19,5 @@ impl Timestamp {
 #[no_mangle]
 extern "C" {
     pub fn cosmic_timestamp() -> Timestamp;
-    pub fn cosmic_uuid() -> loc::Uuid;
+    pub fn cosmic_uuid() -> point::Uuid;
 }

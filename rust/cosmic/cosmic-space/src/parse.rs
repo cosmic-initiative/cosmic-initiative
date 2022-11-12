@@ -1,10 +1,10 @@
-pub mod point;
-pub mod kind;
-pub mod util;
 pub mod command;
+pub mod kind;
+pub mod point;
+pub mod util;
 
 #[cfg(test)]
-pub mod test2;
+pub mod test;
 
 use core::fmt;
 use core::fmt::Display;
@@ -49,12 +49,12 @@ use regex::{Captures, Error, Match, Regex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, span_with_extra, Trace};
-use cosmic_nom::{Res, Span, trim, tw, Wrap};
+use cosmic_nom::{trim, tw, Res, Span, Wrap};
 
 use crate::command::common::{PropertyMod, SetProperties, StateSrc, StateSrcVar};
 use crate::command::direct::create::{
-    Create, CreateVar, PointSegTemplate, PointTemplate, PointTemplateSeg,
-    PointTemplateVar, Require, Strategy, Template, TemplateVar,
+    Create, CreateVar, PointSegTemplate, PointTemplate, PointTemplateSeg, PointTemplateVar,
+    Require, Strategy, Template, TemplateVar,
 };
 use crate::command::direct::get::{Get, GetOp, GetVar};
 use crate::command::direct::select::{Select, SelectIntoSubstance, SelectVar};
@@ -69,14 +69,14 @@ use crate::config::mechtron::MechtronConfig;
 use crate::config::Document;
 use crate::err::report::{Label, Report, ReportKind};
 use crate::err::{ParseErrs, SpaceErr};
-use crate::kind2::{Kind, KindCat, KindSelector, Pattern, Specific};
-use crate::kind2::parse::{kind_selector, proto_kind};
-use crate::loc::StarKey;
-use crate::loc::{
-    Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegment, PointSegVar,
-    PointVar, RouteSeg, RouteSegVar, Surface, Topic, Uuid, Variable, VarVal, Version,
+use crate::kind::parse::{kind_selector, proto_kind};
+use crate::kind::{Kind, KindCat, KindSelector, Pattern, Specific};
+use crate::point::parse::point_selector_var;
+use crate::point::StarKey;
+use crate::point::{
+    Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegVar, PointSegment,
+    PointVar, RouteSeg, RouteSegVar, Surface, Topic, Uuid, VarVal, Variable, Version,
 };
-use crate::loc::parse::point_selector_var;
 use crate::model::{CamelCase, Domain, SkewerCase};
 use crate::parse::error::{find_parse_err, result};
 use crate::parse::model::{
@@ -92,8 +92,11 @@ use crate::security::{
     AccessGrantKind, AccessGrantKindDef, ChildPerms, ParticlePerms, Permissions, PermissionsMask,
     PermissionsMaskKind, Privilege,
 };
-use crate::selector::{ExactPointSeg, PatternBlockVar, PointHierarchy, PointKindSeg, PointSegSelector, SelectorDef, UploadBlock, VersionReq};
 use crate::selector::specific::{ProductSelector, ProductVariantSelector, VendorSelector};
+use crate::selector::{
+    ExactPointSeg, PatternBlockVar, PointHierarchy, PointKindSeg, PointSegSelector, SelectorDef,
+    UploadBlock, VersionReq,
+};
 
 use crate::substance::Bin;
 use crate::substance::{
@@ -651,8 +654,6 @@ pub fn file_point_capture_segment(input: Span) -> Res<Span, PointSeg> {
 }
  */
 
-
-
 pub fn asterisk<T: Span, E: nom::error::ParseError<T>>(input: T) -> IResult<T, T, E>
 where
     T: InputTakeAtPosition + nom::InputLength,
@@ -741,12 +742,7 @@ where
 }
 
 pub fn domain<I: Span>(i: I) -> Res<I, Domain> {
-    domain_chars(i).map(|(next, domain)| {
-        (
-            next,
-            Domain::new(domain.to_string())
-        )
-    })
+    domain_chars(i).map(|(next, domain)| (next, Domain::new(domain.to_string())))
 }
 
 pub fn point_segment_chars<T: Span>(i: T) -> Res<T, T>
@@ -1073,24 +1069,13 @@ pub fn consume_path<I: Span>(input: I) -> Res<I, I> {
 }
 
 pub fn camel_case<I: Span>(input: I) -> Res<I, CamelCase> {
-    context("expect-camel-case", camel_case_chars)(input).map(|(next, camel_case_chars)| {
-        (
-            next,
-            CamelCase::new(
-                 camel_case_chars.to_string())
-        )
-    })
+    context("expect-camel-case", camel_case_chars)(input)
+        .map(|(next, camel_case_chars)| (next, CamelCase::new(camel_case_chars.to_string())))
 }
 
 pub fn skewer_case<I: Span>(input: I) -> Res<I, SkewerCase> {
-    context("expect-skewer-case", skewer_case_chars)(input).map(|(next, skewer_case_chars)| {
-        (
-            next,
-            SkewerCase::new(
-                 skewer_case_chars.to_string()
-            ),
-        )
-    })
+    context("expect-skewer-case", skewer_case_chars)(input)
+        .map(|(next, skewer_case_chars)| (next, SkewerCase::new(skewer_case_chars.to_string())))
 }
 
 pub fn camel_case_chars<I: Span>(input: I) -> Res<I, I> {
@@ -1357,7 +1342,6 @@ pub fn point_template<I: Span>(input: I) -> Res<I, PointTemplateVar> {
         }
     }
 }
-
 
 pub fn template<I: Span>(input: I) -> Res<I, TemplateVar> {
     tuple((point_template, delimited(tag("<"), kind_selector, tag(">"))))(input)
@@ -2510,12 +2494,12 @@ pub fn lex_scoped_block_kind<I: Span>(input: I) -> Res<I, BlockKind> {
     ))(input)
 }
 
-pub fn rough_pipeline_step<I:Span> ( input: I ) -> Res<I,Pipeline> {
+pub fn rough_pipeline_step<I: Span>(input: I) -> Res<I, Pipeline> {
     todo!()
 }
 
 pub fn lex_scope_pipeline_step_and_block<I: Span>(input: I) -> Res<I, (Option<I>, LexBlock<I>)> {
-  todo!()
+    todo!()
 }
 
 pub fn lex_sub_scope_selectors_and_filters_and_block<I: Span>(input: I) -> Res<I, LexBlock<I>> {
@@ -2930,14 +2914,13 @@ pub mod model {
         PipelineStopDef, PipelineStopVar, WaveDirection,
     };
     use crate::err::{ParseErrs, SpaceErr};
-    use crate::loc::{Point, PointCtx, PointVar, Version};
+    use crate::point::{Point, PointCtx, PointVar, Version};
     use crate::model::Env;
     use crate::parse::error::result;
     use crate::parse::{
-        Assignment, camel_case_chars, CtxResolver, filepath_chars, http_method, lex_child_scopes,
-        method_kind, pipeline, rc_command_type, ResolverErr,
-        SubstParser, value_pattern, wrapped_cmd_method, wrapped_ext_method, wrapped_http_method,
-        wrapped_sys_method,
+        camel_case_chars, filepath_chars, http_method, lex_child_scopes, method_kind, pipeline,
+        rc_command_type, value_pattern, wrapped_cmd_method, wrapped_ext_method,
+        wrapped_http_method, wrapped_sys_method, Assignment, CtxResolver, ResolverErr, SubstParser,
     };
     use crate::util::{HttpMethodPattern, StringMatcher, ToResolved, ValueMatcher, ValuePattern};
     use crate::wave::core::http2::HttpMethod;
@@ -4230,20 +4213,20 @@ pub mod error {
     use nom::multi::{many0, many1, separated_list0};
     use nom::sequence::{delimited, pair, preceded, terminated, tuple};
     use nom::{
-        AsChar, Compare, Err, InputLength, InputTake, InputTakeAtPosition, IResult, Parser, Slice,
+        AsChar, Compare, Err, IResult, InputLength, InputTake, InputTakeAtPosition, Parser, Slice,
     };
     use nom_supreme::error::{BaseErrorKind, ErrorTree, StackContext};
     use regex::internal::Input;
     use regex::{Error, Regex};
 
-    use cosmic_nom::{len, new_span, Res, Span, span_with_extra, trim, tw};
+    use cosmic_nom::{len, new_span, span_with_extra, trim, tw, Res, Span};
 
     use crate::command::direct::CmdKind;
     use crate::command::CommandVar;
     use crate::config::bind::{PipelineStepVar, PipelineStopVar, RouteSelector, WaveDirection};
     use crate::err::report::{Label, Report, ReportKind};
     use crate::err::{ParseErrs, SpaceErr};
-    use crate::loc::{Layer, PointSeg, PointVar, StarKey, Topic, VarVal, Version};
+    use crate::point::{Layer, PointSeg, PointVar, StarKey, Topic, VarVal, Version};
     use crate::model::CamelCase;
     use crate::parse::model::{
         BindScope, BindScopeKind, BlockKind, Chunk, DelimitedBlockKind, LexScope, NestedBlockKind,
@@ -4254,13 +4237,11 @@ pub mod error {
         camel_case_to_string_matcher, domain, file_chars, filepath_chars, get, lex_child_scopes,
         lex_root_scope, lex_route_selector, lex_scopes, lowercase_alphanumeric, method_kind,
         nospace1, parse_uuid, point_segment_chars, point_var, rec_version, select, set, skewer,
-        skewer_case, skewer_chars, subst_path, SubstParser, unwrap_block, variable_name,
-        version_chars, version_req_chars,
+        skewer_case, skewer_chars, subst_path, unwrap_block, variable_name, version_chars,
+        version_req_chars, SubstParser,
     };
     use crate::particle::PointKindVar;
-    use crate::selector::{
-        UploadBlock, VersionReq,
-    };
+    use crate::selector::{UploadBlock, VersionReq};
     use crate::substance::{
         CallKind, CallVar, CallWithConfigVar, ExtCall, HttpCall, ListPattern, MapPatternVar,
         NumRange, SubstanceFormat, SubstanceKind, SubstancePattern, SubstancePatternVar,
@@ -4272,7 +4253,6 @@ pub mod error {
     use crate::wave::core::http2::HttpMethod;
     use crate::wave::core::hyp::HypMethod;
     use crate::wave::core::{Method, MethodKind, MethodPattern};
-
 
     pub fn result<I: Span, R>(result: Result<(I, R), Err<ErrorTree<I>>>) -> Result<R, SpaceErr> {
         match result {
@@ -4788,7 +4768,6 @@ fn space<I: Span>(input: I) -> Res<I, I> {
     recognize(alt((skewer_chars, rec_domain)))(input)
 }
 
-
 pub fn rec_domain_pattern<I: Span>(input: I) -> Res<I, Pattern<I>> {
     pattern(rec_domain)(input)
 }
@@ -4800,12 +4779,6 @@ pub fn specific_version_req<I: Span>(input: I) -> Res<I, VersionReq> {
     delimited(tag("("), version_req, tag(")"))(input)
 }
 
-
-
-
-
-
-
 pub fn to_string<I: Span, F>(mut f: F) -> impl FnMut(I) -> Res<I, String>
 where
     F: FnMut(I) -> Res<I, I> + Copy,
@@ -4815,9 +4788,6 @@ where
             .map(|(next, output)| (next, output.to_string()))
     }
 }
-
-
-
 
 /*
 fn version_req<I:Span>(input: Span) -> Res<Span, VersionReq> {
@@ -4851,8 +4821,6 @@ pub fn version<I: Span>(input: I) -> Res<I, Version> {
         }
     }
 }
-
-
 
 pub fn args<T>(i: T) -> Res<T, T>
 where
@@ -4941,8 +4909,6 @@ where
     )
 }
 
-
-
 pub fn parse_alpha1_str<I: Span, O: FromStr>(input: I) -> Res<I, O> {
     let (next, rtn) = recognize(alpha1)(input)?;
     match O::from_str(rtn.to_string().as_str()) {
@@ -4957,7 +4923,6 @@ pub fn parse_alpha1_str<I: Span, O: FromStr>(input: I) -> Res<I, O> {
 pub fn rc_command<I: Span>(input: I) -> Res<I, CmdKind> {
     parse_alpha1_str(input)
 }
-
 
 pub fn parse_camel_case_str<I: Span, O: FromStr>(input: I) -> Res<I, O> {
     let (next, rtn) = recognize(camel_case_chars)(input)?;
@@ -5058,8 +5023,6 @@ pub fn rc_command_type<I: Span>(input: I) -> Res<I, CmdKind> {
     parse_alpha1_str(input)
 }
 
-
-
 fn insert_block_pattern<I: Span>(input: I) -> Res<I, UploadBlock> {
     delimited(multispace0, filename, multispace0)(input).map(|(next, filename)| {
         (
@@ -5114,8 +5077,6 @@ pub fn upload_blocks<I: Span>(input: I) -> Res<I, Vec<UploadBlock>> {
         (next, rtn)
     })
 }
-
-
 
 /*
 pub fn remove_comments_from_span( span: Span )-> Res<Span,Span> {
@@ -5284,15 +5245,24 @@ pub fn doc(src: &str) -> Result<Document, SpaceErr> {
     }
 }
 
-fn parse_mechtron_config<I: Span>(input: I) -> Res<I,Vec<MechtronScope>> {
-    let (next, (_,( _, (_,assignments)))) = pair( multispace0, context("wasm",tuple((
-        tag("Wasm"),
-        alt((tuple((
+fn parse_mechtron_config<I: Span>(input: I) -> Res<I, Vec<MechtronScope>> {
+    let (next, (_, (_, (_, assignments)))) = pair(
         multispace0,
-            unwrap_block(BlockKind::Nested(NestedBlockKind::Curly),many0(assignment)))
-        ),fail))),
-    )))(input)?;
-    Ok((next,vec![MechtronScope::WasmScope(assignments)]))
+        context(
+            "wasm",
+            tuple((
+                tag("Wasm"),
+                alt((
+                    tuple((
+                        multispace0,
+                        unwrap_block(BlockKind::Nested(NestedBlockKind::Curly), many0(assignment)),
+                    )),
+                    fail,
+                )),
+            )),
+        ),
+    )(input)?;
+    Ok((next, vec![MechtronScope::WasmScope(assignments)]))
 }
 
 fn assignment<I>(input: I) -> Res<I, Assignment>
@@ -5301,15 +5271,15 @@ where
 {
     tuple((
         multispace0,
-        context("assignment:plus", alt( (tag("+"),fail))),
-        context("assignment:key", alt( (skewer,fail))),
+        context("assignment:plus", alt((tag("+"), fail))),
+        context("assignment:key", alt((skewer, fail))),
         multispace0,
-        context( "assignment:equals", alt((tag("="),fail))),
+        context("assignment:equals", alt((tag("="), fail))),
         multispace0,
-        context( "assignment:value", alt((nospace1_nosemi,fail))),
+        context("assignment:value", alt((nospace1_nosemi, fail))),
         multispace0,
         opt(tag(";")),
-        multispace0
+        multispace0,
     ))(input)
     .map(|(next, (_, _, k, _, _, _, v, _, _, _))| {
         (
@@ -5452,11 +5422,9 @@ pub fn nospace1<I: Span>(input: I) -> Res<I, I> {
 pub fn nospace1_nosemi<I: Span>(input: I) -> Res<I, I> {
     recognize(pair(
         satisfy(|c| !c.is_whitespace() && ';' != c),
-        many0(satisfy(|c| !c.is_whitespace( ) && ';' != c)),
+        many0(satisfy(|c| !c.is_whitespace() && ';' != c)),
     ))(input)
 }
-
-
 
 pub fn no_space_with_blocks<I: Span>(input: I) -> Res<I, I> {
     recognize(many1(alt((recognize(any_block), nospace1))))(input)
@@ -5471,11 +5439,7 @@ pub fn pipeline_step_var<I: Span>(input: I) -> Res<I, PipelineStepVar> {
                 value(WaveDirection::Reflect, tag("=")),
             )),
             opt(pair(
-                delimited(
-                    tag("["),
-                    context("pipeline:step:exit", alpha0),
-                    tag("]"),
-                ),
+                delimited(tag("["), context("pipeline:step:exit", alpha0), tag("]")),
                 context(
                     "pipeline:step:payload",
                     cut(alt((
@@ -5488,11 +5452,11 @@ pub fn pipeline_step_var<I: Span>(input: I) -> Res<I, PipelineStepVar> {
         )),
     )(input)
     .map(|(next, (entry, block_and_exit, _))| {
- //       let mut blocks = vec![];
+        //       let mut blocks = vec![];
         let exit = match block_and_exit {
             None => entry.clone(),
             Some((block, exit)) => {
-//                blocks.push(block);
+                //                blocks.push(block);
                 exit
             }
         };
@@ -5523,7 +5487,6 @@ pub fn core_pipeline_stop<I: Span>(input: I) -> Res<I, PipelineStopVar> {
 pub fn return_pipeline_stop<I: Span>(input: I) -> Res<I, PipelineStopVar> {
     tag("&")(input).map(|(next, _)| (next, PipelineStopVar::Reflect))
 }
-
 
 pub fn point_pipeline_stop<I: Span>(input: I) -> Res<I, PipelineStopVar> {
     context("pipeline:stop:point", point_var)(input)
@@ -5897,19 +5860,17 @@ pub mod cmd_test {
     use core::str::FromStr;
 
     use nom::error::{VerboseError, VerboseErrorKind};
-    use nom_supreme::final_parser::{ExtractContext, final_parser};
+    use nom_supreme::final_parser::{final_parser, ExtractContext};
 
     use cosmic_nom::{new_span, Res};
 
     use crate::command::{Command, CommandVar};
     use crate::err::SpaceErr;
-    use crate::parse::error::result;
-    use crate::parse::{
-        command, create_command, publish_command, script, upload_blocks,
-    };
-    use crate::util::ToResolved;
-    use crate::{ SetProperties};
     use crate::model::CamelCase;
+    use crate::parse::error::result;
+    use crate::parse::{command, create_command, publish_command, script, upload_blocks};
+    use crate::util::ToResolved;
+    use crate::SetProperties;
 
     /*
     #[mem]
@@ -5944,8 +5905,6 @@ pub mod cmd_test {
         }
         Ok(())
     }
-
-
 
     #[test]
     pub fn test_script() -> Result<(), SpaceErr> {
@@ -5987,7 +5946,6 @@ pub mod cmd_test {
 
         Ok(())
     }
-
 
     #[test]
     pub fn test_create_properties() -> Result<(), SpaceErr> {
@@ -6083,21 +6041,15 @@ pub fn port<I: Span>(input: I) -> Res<I, Surface> {
     }
 }
 
-
-pub fn expect<I,O,F>( mut f: F ) -> impl FnMut(I) -> Res<I,O> where F: FnMut(I) -> Res<I,O>+Copy{
+pub fn expect<I, O, F>(mut f: F) -> impl FnMut(I) -> Res<I, O>
+where
+    F: FnMut(I) -> Res<I, O> + Copy,
+{
     move |i: I| {
-        f(i).map_err( |e| {
-            match e {
-                Err::Incomplete(i) => {
-                    Err::Incomplete(i)
-                }
-                Err::Error(e) => {
-                    Err::Failure(e)
-                }
-                Err::Failure(e) => {
-                    Err::Failure(e)
-                }
-            }
+        f(i).map_err(|e| match e {
+            Err::Incomplete(i) => Err::Incomplete(i),
+            Err::Error(e) => Err::Failure(e),
+            Err::Failure(e) => Err::Failure(e),
         })
     }
 }

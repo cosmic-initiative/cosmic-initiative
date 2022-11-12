@@ -38,7 +38,7 @@ use cosmic_space::command::direct::select::{Select, SubSelect};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::fail::Timeout;
 use cosmic_space::hyper::{ParticleLocation, ParticleRecord};
-use cosmic_space::loc::{
+use cosmic_space::point::{
     Layer, MachineName, Point, RouteSeg, StarKey, Surface, ToBaseKind, ToSurface,
 };
 use cosmic_space::log::RootLogger;

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::command::direct::Cmd;
 use crate::err::SpaceErr;
-use crate::loc::{Point, PointCtx, PointVar, Topic};
+use crate::point::{Point, PointCtx, PointVar, Topic};
 use crate::model::Env;
 use crate::parse::model::{
     BindScope, MethodScope, PipelineSegment, PipelineSegmentDef, PipelineVar, RouteScope,

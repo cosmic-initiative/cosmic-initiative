@@ -10,7 +10,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use regex::Regex;
 use serde::de::Error;
 use crate::err::SpaceErr;
-use crate::loc::Point;
+use crate::point::Point;
 use crate::parse;
 use crate::parse::error::result;
 use crate::parse::{CtxResolver, ResolverErr, VarResolver};

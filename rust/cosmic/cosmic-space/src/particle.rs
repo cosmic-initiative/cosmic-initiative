@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use cosmic_nom::{new_span, Res, Span};
 use crate::err::SpaceErr;
-use crate::kind2::{Kind, KindCat};
+use crate::kind::{Kind, KindCat};
 
-use crate::loc::{Point, PointCtx, PointVar};
+use crate::point::{Point, PointCtx, PointVar};
 use crate::model::Env;
 use crate::parse::error::result;
 use crate::parse::parse_alpha1_str;
@@ -191,7 +191,7 @@ pub mod particle {
     use cosmic_nom::{Res, Span};
 
     use crate::err::SpaceErr;
-    use crate::loc::Point;
+    use crate::point::Point;
     use crate::parse::parse_alpha1_str;
     use crate::particle::PointKind;
     use crate::security::Permissions;

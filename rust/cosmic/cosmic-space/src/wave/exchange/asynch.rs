@@ -1,4 +1,4 @@
-use crate::loc::{ToPoint, ToSurface};
+use crate::point::{ToPoint, ToSurface};
 use crate::log::{PointLogger, RootLogger, Trackable, Tracker};
 use crate::particle::traversal::Traversal;
 use crate::settings::Timeouts;

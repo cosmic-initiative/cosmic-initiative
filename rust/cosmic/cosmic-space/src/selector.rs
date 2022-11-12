@@ -10,8 +10,8 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use cosmic_nom::{new_span, Trace};
 use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector};
 
-use crate::kind2::{Kind, ProtoKindSelector, Specific};
-use crate::loc::{
+use crate::kind::{Kind, ProtoKindSelector, Specific};
+use crate::point::{
     Layer, PointCtx, PointSeg, PointSegCtx, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic,
     Variable, VarVal, Version,
 };
@@ -23,7 +23,7 @@ use crate::substance::{
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
-use crate::kind2::parse::specific_selector;
+use crate::kind::parse::specific_selector;
 use crate::model::{CamelCase, Env};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

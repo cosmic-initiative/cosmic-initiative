@@ -6,7 +6,7 @@ use crate::star::HyperStarSkel;
 use crate::Cosmos;
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::config::bind::BindConfig;
-use cosmic_space::loc::Point;
+use cosmic_space::point::Point;
 use cosmic_space::parse::bind_config;
 use cosmic_space::selector::ProtoKindSelector;
 use cosmic_space::util::log;

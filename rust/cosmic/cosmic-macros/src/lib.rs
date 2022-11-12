@@ -10,7 +10,7 @@ use proc_macro::TokenStream;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use cosmic_space::loc;
+use cosmic_space::point;
 use nom::combinator::into;
 use nom_locate::LocatedSpan;
 use proc_macro2::Ident;
@@ -33,8 +33,8 @@ use cosmic_space::util::log;
 use cosmic_space::wasm::Timestamp;
 
 #[no_mangle]
-extern "C" fn cosmic_uuid() -> loc::Uuid {
-    loc::Uuid::from(uuid::Uuid::new_v4().to_string()).unwrap()
+extern "C" fn cosmic_uuid() -> point::Uuid {
+    point::Uuid::from(uuid::Uuid::new_v4().to_string()).unwrap()
 }
 
 #[no_mangle]

@@ -7,7 +7,7 @@ use cosmic_space::command::direct::delete::Delete;
 use cosmic_space::command::direct::query::{Query, QueryResult};
 use cosmic_space::command::direct::select::{Select, SubSelect};
 use cosmic_space::hyper::{ParticleLocation, ParticleRecord};
-use cosmic_space::loc::Point;
+use cosmic_space::point::Point;
 use cosmic_space::parse::get_properties;
 use cosmic_space::particle::{Details, Properties, Property, Status, Stub};
 use cosmic_space::security::{Access, AccessGrant, IndexedAccessGrant};

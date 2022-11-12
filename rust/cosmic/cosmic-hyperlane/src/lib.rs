@@ -29,7 +29,7 @@ use cosmic_space::command::direct::create::{PointFactoryU64, PointSegTemplate};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::frame::PrimitiveFrame;
 use cosmic_space::hyper::{Greet, HyperSubstance, InterchangeKind, Knock};
-use cosmic_space::loc::{Layer, Point, PointFactory, Surface, ToPoint, ToSurface, Version};
+use cosmic_space::point::{Layer, Point, PointFactory, Surface, ToPoint, ToSurface, Version};
 use cosmic_space::log::{PointLogger, RootLogger, Tracker};
 use cosmic_space::particle::Status;
 use cosmic_space::settings::Timeouts;
@@ -1977,8 +1977,8 @@ mod tests {
 
     use cosmic_space::command::direct::create::PointFactoryU64;
     use cosmic_space::hyper::{InterchangeKind, Knock};
-    use cosmic_space::loc::Point;
-    use cosmic_space::loc::Uuid;
+    use cosmic_space::point::Point;
+    use cosmic_space::point::Uuid;
     use cosmic_space::log::RootLogger;
     use cosmic_space::substance::Substance;
     use cosmic_space::wave::HyperWave;
@@ -2055,7 +2055,7 @@ pub mod test_util {
     use cosmic_space::command::direct::create::PointFactoryU64;
     use cosmic_space::err::SpaceErr;
     use cosmic_space::hyper::{Greet, InterchangeKind, Knock};
-    use cosmic_space::loc::{Layer, Point, Surface, ToPoint, ToSurface};
+    use cosmic_space::point::{Layer, Point, Surface, ToPoint, ToSurface};
     use cosmic_space::log::{PointLogger, RootLogger};
     use cosmic_space::settings::Timeouts;
     use cosmic_space::substance::{Substance, Token};
@@ -2369,7 +2369,7 @@ pub mod test {
     use cosmic_space::command::direct::create::PointFactoryU64;
     use cosmic_space::err::SpaceErr;
     use cosmic_space::hyper::{Greet, InterchangeKind, Knock};
-    use cosmic_space::loc::{Layer, Point, Surface, ToPoint, ToSurface};
+    use cosmic_space::point::{Layer, Point, Surface, ToPoint, ToSurface};
     use cosmic_space::log::RootLogger;
     use cosmic_space::settings::Timeouts;
     use cosmic_space::substance::{Substance, Token};

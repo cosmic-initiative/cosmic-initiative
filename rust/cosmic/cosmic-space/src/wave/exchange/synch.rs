@@ -1,4 +1,4 @@
-use crate::loc::ToPoint;
+use crate::point::ToPoint;
 use crate::wave::core::cmd::CmdMethod;
 use crate::wave::core::CoreBounce;
 use crate::wave::exchange::{

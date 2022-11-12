@@ -51,8 +51,8 @@ use cosmic_space::artifact::asynch::ArtifactApi;
 use cosmic_space::artifact::asynch::ReadArtifactFetcher;
 use cosmic_space::command::direct::create::KindTemplate;
 use cosmic_space::err::SpaceErr;
-use cosmic_space::loc::{MachineName, StarKey};
-use cosmic_space::loc::{Point, ToBaseKind};
+use cosmic_space::point::{MachineName, StarKey};
+use cosmic_space::point::{Point, ToBaseKind};
 use cosmic_space::log::RootLogger;
 use cosmic_space::particle::property::{
     AnythingPattern, BoolPattern, EmailPattern, PointPattern, PropertiesConfig,
@@ -63,7 +63,7 @@ use cosmic_space::substance::Token;
 use cosmic_hyperlane_tcp::HyperlaneTcpServer;
 use cosmic_hyperspace::driver::web::WebDriverFactory;
 use cosmic_hyperspace::mem::registry::{MemRegApi, MemRegCtx};
-use cosmic_space::loc;
+use cosmic_space::point;
 use cosmic_space::wasm::Timestamp;
 
 fn main() -> Result<(), StarErr> {

@@ -25,7 +25,7 @@ use cosmic_hyperlane::{
 use cosmic_space::artifact::asynch::{ArtifactApi, ArtifactFetcher, ReadArtifactFetcher};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{InterchangeKind, Knock};
-use cosmic_space::loc::{
+use cosmic_space::point::{
     ConstellationName, Layer, MachineName, Point, StarHandle, StarKey, Surface, ToPoint, ToSurface,
 };
 use cosmic_space::log::{PointLogger, RootLogger};

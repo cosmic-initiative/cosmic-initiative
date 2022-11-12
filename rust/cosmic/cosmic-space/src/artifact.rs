@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{watch, RwLock};
 
 use crate::config::mechtron::MechtronConfig;
-use crate::loc::{Point, ToSurface};
+use crate::point::{Point, ToSurface};
 use crate::particle::Stub;
 use crate::substance::Bin;
 use crate::wave::core::cmd::CmdMethod;

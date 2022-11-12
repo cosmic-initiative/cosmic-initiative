@@ -48,7 +48,7 @@ pub mod resource {
     use serde::{Deserialize, Serialize};
 
     use crate::fail::{Bad, BadCoercion, BadRequest, Conditional, Messaging, NotFound};
-    use crate::loc::Point;
+    use crate::point::Point;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum Fail {

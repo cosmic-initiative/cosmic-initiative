@@ -7,7 +7,7 @@ use cosmic_macros_primitive::Autobox;
 
 use crate::command::Command;
 use crate::err::StatusErr;
-use crate::loc::ToSurface;
+use crate::point::ToSurface;
 use crate::substance::FormErrs;
 use crate::util::{ValueMatcher, ValuePattern};
 use crate::wave::core::cmd::CmdMethod;

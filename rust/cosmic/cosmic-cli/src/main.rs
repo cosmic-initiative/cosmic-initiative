@@ -17,7 +17,7 @@ use cosmic_nom::new_span;
 use cosmic_space::command::{CmdTransfer, Command, RawCommand};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{InterchangeKind, Knock};
-use cosmic_space::loc::{Point, ToSurface};
+use cosmic_space::point::{Point, ToSurface};
 use cosmic_space::log::RootLogger;
 use cosmic_space::parse::error::result;
 use cosmic_space::parse::{command_line, upload_blocks};

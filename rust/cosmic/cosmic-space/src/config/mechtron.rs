@@ -1,4 +1,4 @@
-use crate::loc::Point;
+use crate::point::Point;
 use crate::parse::mechtron_config;
 use crate::parse::model::MechtronScope;
 use crate::{Bin, SpaceErr};

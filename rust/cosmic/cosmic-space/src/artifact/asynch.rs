@@ -1,6 +1,6 @@
 use crate::artifact::ArtRef;
 use crate::config::mechtron::MechtronConfig;
-use crate::loc::ToSurface;
+use crate::point::ToSurface;
 use crate::wave::core::cmd::CmdMethod;
 use crate::wave::exchange::asynch::ProtoTransmitter;
 use crate::wave::DirectedProto;

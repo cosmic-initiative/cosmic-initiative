@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::command::common::StateSrc::Substance;
 use crate::err::SpaceErr;
-use crate::loc::{Layer, Point, ToPoint, ToSurface, Uuid};
+use crate::point::{Layer, Point, ToPoint, ToSurface, Uuid};
 use crate::model::CamelCase;
 use crate::parse::to_string;
 use crate::selector::PointSelector;

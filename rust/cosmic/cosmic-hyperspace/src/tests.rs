@@ -28,7 +28,7 @@ use cosmic_space::command::direct::create::{
 use cosmic_space::command::{CmdTransfer, RawCommand};
 use cosmic_space::hyper::MountKind;
 use cosmic_space::hyper::{Assign, AssignmentKind, HyperSubstance, InterchangeKind, Knock};
-use cosmic_space::loc::{Layer, StarHandle, ToPoint, ToSurface, Uuid};
+use cosmic_space::point::{Layer, StarHandle, ToPoint, ToSurface, Uuid};
 use cosmic_space::log::{LogSource, PointLogger, RootLogger, StdOutAppender};
 use cosmic_space::particle::traversal::TraversalDirection;
 use cosmic_space::wave::core::cmd::CmdMethod;

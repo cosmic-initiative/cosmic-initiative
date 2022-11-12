@@ -11,7 +11,7 @@ use crate::command::Command;
 use crate::command::direct::create::{PointSegTemplate, PointTemplate, Template};
 use crate::config::Document;
 use crate::err::SpaceErr;
-use crate::loc::{Point, PointCtx, PointSegVar, RouteSegVar};
+use crate::point::{Point, PointCtx, PointSegVar, RouteSegVar};
 use crate::model::Env;
 use crate::parse::error::result;
 use crate::parse::{assignment, base_point_segment, base_seg, command_line, doc, expected_block_terminator_or_non_terminator, lex_block, lex_nested_block, lex_scope, lex_scope_selector, lex_scopes, lowercase1, mesh_eos, nested_block, next_stacked_name, path_regex, pipeline, pipeline_segment, pipeline_step_var, pipeline_stop_var, point_template, point_var, pop, rec_version, root_ctx_seg, root_scope, root_scope_selector, route_attribute, scope_filter, scope_filters, skewer_case_chars, skewer_dot, space_chars, space_no_dupe_dots, space_point_segment, strip_comments, template, var_seg, variable_name, version};

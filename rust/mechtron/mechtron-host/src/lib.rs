@@ -9,7 +9,7 @@ use cosmic_space::artifact::asynch::{ArtifactApi, ReadArtifactFetcher};
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::config::mechtron::MechtronConfig;
 use cosmic_space::err::SpaceErr;
-use cosmic_space::loc::{Layer, Point, ToSurface};
+use cosmic_space::point::{Layer, Point, ToSurface};
 use cosmic_space::particle::{Details, Property};
 use cosmic_space::substance::Bin;
 use cosmic_space::wave::DirectedWave;
@@ -24,7 +24,7 @@ use cosmic_space::substance::Substance;
 use cosmic_space::wasm::Timestamp;
 use cosmic_space::wave::core::hyp::HypMethod;
 use cosmic_space::wave::{Agent, DirectedProto};
-use cosmic_space::{loc, VERSION};
+use cosmic_space::{point, VERSION};
 
 use cosmic_space::wave::core::cmd::CmdMethod;
 use cosmic_space::wave::core::Method;
@@ -833,7 +833,7 @@ impl WasmHost {
 pub mod test {
     use crate::HostsRunner;
     use cosmic_space::artifact::asynch::MapFetcher;
-    use cosmic_space::loc::Point;
+    use cosmic_space::point::Point;
     use cosmic_space::particle::Details;
     use std::fs;
     use std::str::FromStr;

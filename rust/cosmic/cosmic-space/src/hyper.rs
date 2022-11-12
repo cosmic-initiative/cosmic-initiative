@@ -8,7 +8,7 @@ use cosmic_macros_primitive::Autobox;
 use crate::command::common::StateSrc;
 use crate::config::mechtron::MechtronConfig;
 use crate::err::SpaceErr;
-use crate::loc::{Point, StarKey, Surface, ToPoint, ToSurface};
+use crate::point::{Point, StarKey, Surface, ToPoint, ToSurface};
 use crate::log::Log;
 use crate::model::SkewerCase;
 use crate::particle::{Details, Status, Stub};
@@ -20,7 +20,7 @@ use crate::wave::{
     Ping, Pong, ReflectedKind, ReflectedProto, ToRecipients, UltraWave, Wave, WaveId, WaveKind,
 };
 use crate::{Agent, Document};
-use crate::kind2::{KindCat, Kind, KindSelector, ProtoKindSelector, StarVariant};
+use crate::kind::{KindCat, Kind, KindSelector, ProtoKindSelector, StarVariant};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, strum_macros::Display)]
 pub enum AssignmentKind {
