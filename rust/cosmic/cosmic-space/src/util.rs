@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::err::SpaceErr;
 use crate::loc;
 use crate::loc::Uuid;
-use crate::parse::Env;
+use crate::model::Env;
 use crate::wasm::{cosmic_timestamp, cosmic_uuid, Timestamp};
 use crate::wave::core::http2::HttpMethod;
 

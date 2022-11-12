@@ -60,6 +60,8 @@ pub mod wasm;
 pub mod wave;
 pub mod kind2;
 pub mod point;
+pub mod model;
+pub mod lex;
 
 lazy_static! {
     pub static ref VERSION: semver::Version =

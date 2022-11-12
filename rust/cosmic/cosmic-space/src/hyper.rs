@@ -10,7 +10,7 @@ use crate::config::mechtron::MechtronConfig;
 use crate::err::SpaceErr;
 use crate::loc::{Point, StarKey, Surface, ToPoint, ToSurface};
 use crate::log::Log;
-use crate::parse::SkewerCase;
+use crate::model::SkewerCase;
 use crate::particle::{Details, Status, Stub};
 use crate::substance::Substance;
 use crate::wave::core::cmd::CmdMethod;

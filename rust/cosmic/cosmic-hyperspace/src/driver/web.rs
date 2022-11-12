@@ -18,10 +18,10 @@ use cosmic_space::fail::http;
 use cosmic_space::hyper::{HyperSubstance, ParticleLocation};
 use cosmic_space::kind::{BaseKind, Kind, NativeSub};
 use cosmic_space::loc::{Layer, Point, ToSurface};
-use cosmic_space::parse::{bind_config, CamelCase};
+use cosmic_space::parse::bind_config;
 use cosmic_space::particle::traversal::{Traversal, TraversalDirection};
 use cosmic_space::particle::Status;
-use cosmic_space::selector::{ProtoKindSelector, Pattern, SubKindSelector};
+use cosmic_space::selector::{Pattern, ProtoKindSelector, SubKindSelector};
 use cosmic_space::substance::{Bin, Substance};
 use cosmic_space::util::{log, ValuePattern};
 use cosmic_space::wave::core::http2::{HttpMethod, HttpRequest};
@@ -41,6 +41,7 @@ use std::thread;
 use tiny_http::Server;
 use tokio::runtime::Runtime;
 use url::Url;
+use cosmic_space::model::CamelCase;
 
 lazy_static! {
     static ref WEB_BIND_CONFIG: ArtRef<BindConfig> = ArtRef::new(

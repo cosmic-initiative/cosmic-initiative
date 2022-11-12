@@ -1,11 +1,12 @@
 use crate::err::ParseErrs;
 use crate::err::SpaceErr;
 use crate::loc::Version;
-use crate::parse::{CamelCase, Domain, SkewerCase};
 use crate::selector::VersionReq;
 use cosmic_nom::Tw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use crate::model::{CamelCase, Domain, SkewerCase};
+use crate::particle::traversal::TraversalPlan;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct SubTypeDef<Part, SubType> {
@@ -14,11 +15,6 @@ pub struct SubTypeDef<Part, SubType> {
     pub r#type: SubType,
 }
 
-impl <Part,SubType> ToString for SubTypeDef<Part,SubType> where Part: ToString, SubType: ToString {
-    fn to_string(&self) -> String {
-        todo!()
-    }
-}
 
 impl<Part, SubType, IsMatchPart, IsMatchSubType> IsMatch<SubTypeDef<Part, SubType>>
     for SubTypeDef<IsMatchPart, IsMatchSubType>
@@ -59,6 +55,8 @@ pub struct ParentChildDef<Parent, Child> {
     pub child: Child,
 }
 
+
+
 impl<Parent, Child, IsMatchParent, IsMatchChild> IsMatch<ParentChildDef<Parent, Child>>
     for ParentChildDef<IsMatchParent, IsMatchChild>
 where
@@ -69,12 +67,6 @@ where
 {
     fn is_match(&self, other: &ParentChildDef<Parent, Child>) -> bool {
         self.parent.is_match(&other.parent) && self.child.is_match(&other.child)
-    }
-}
-
-impl<Parent,Child> ToString for ParentChildDef<Parent,Child> where Parent: ToString, Child: ToString {
-    fn to_string(&self) -> String {
-        todo!()
     }
 }
 
@@ -357,6 +349,38 @@ pub type KindSubTypes = SubTypeDef<KindCat, Option<CamelCase>>;
 pub type Kind = KindDef<KindSubTypes, Option<VariantFull>>;
 pub type ProtoKind = KindDef<Tw<CamelCaseSubTypes>, Tw<Option<ProtoVariant>>>;
 pub type KindFullSubTypesSelector = SubTypeDef<Pattern<KindCat>, OptPattern<CamelCase>>;
+
+impl Kind {
+    pub fn wave_traversal_plan(&self) -> TraversalPlan {
+        todo!()
+    }
+}
+
+impl ToString for VariantFull {
+    fn to_string(&self) -> String {
+        todo!()
+    }
+}
+
+impl ToString for Kind {
+    fn to_string(&self) -> String {
+        if let Some(child) = &self.child {
+            format!("{}<{}>", self.parent.to_string(), child.to_string() )
+        } else {
+            format!("{}", self.parent.to_string() )
+        }
+    }
+}
+
+impl ToString for KindSubTypes {
+    fn to_string(&self) -> String {
+        if let Some(sub) = &self.sub {
+            format!("{}:{}", self.part.to_string(), sub.to_string() )
+        } else {
+            self.part.to_string()
+        }
+    }
+}
 
 
 impl ProtoKind {
@@ -641,19 +665,20 @@ pub type KindSelector =
 pub mod parse {
 
     use crate::kind2::{
-        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, ProtoKindSelector, OptPattern,
-        ParentChildDef, Pattern, ProtoKind, ProtoVariant, Specific, SpecificDef,
-        SpecificFullSelector, SpecificSelector, SpecificSubTypes, SpecificSubTypesSelector,
-        SubTypeDef, VariantDef, VariantSelector, ProtoVariantSelector,
+        CamelCaseSubTypes, CamelCaseSubTypesSelector, KindDef, OptPattern, ParentChildDef,
+        Pattern, ProtoKind, ProtoKindSelector, ProtoVariant, ProtoVariantSelector, Specific,
+        SpecificDef, SpecificFullSelector, SpecificSelector, SpecificSubTypes,
+        SpecificSubTypesSelector, SubTypeDef, VariantDef, VariantSelector,
     };
-    use crate::parse::{camel_case, domain, skewer_case, version, version_req, CamelCase, Domain};
+    use crate::parse::{camel_case, domain, skewer_case, version, version_req};
     use crate::selector::specific::ProductVariantSelector;
-    use cosmic_nom::{tw, Res, Span};
+    use cosmic_nom::{Res, Span, tw};
     use nom::branch::alt;
     use nom::bytes::complete::tag;
     use nom::combinator::{eof, fail, opt, success, value};
     use nom::sequence::{delimited, pair, preceded, tuple};
     use std::str::FromStr;
+    use crate::model::{CamelCase, Domain};
 
     pub fn pattern<I, FnX, X>(mut f: FnX) -> impl FnMut(I) -> Res<I, Pattern<X>> + Copy
     where
@@ -955,7 +980,7 @@ pub mod parse {
         use crate::err::SpaceErr;
         use crate::parse::error::result;
         use crate::parse::{
-            camel_case, domain, expect, rec_version, skewer, version, version_req, CamelCase,
+            camel_case, domain, expect, rec_version, skewer, version, version_req,
         };
         use crate::util::log;
         use crate::util::test::verify;
@@ -964,6 +989,7 @@ pub mod parse {
         use nom::bytes::complete::tag;
         use nom::combinator::{all_consuming, opt};
         use nom::sequence::{delimited, pair, preceded};
+        use crate::model::CamelCase;
 
         #[test]
         pub fn test_camel_case_subtypes() {
@@ -1153,9 +1179,9 @@ pub mod test {
         VersionSelector,
     };
     use crate::loc::Version;
-    use crate::parse::{CamelCase, Domain, SkewerCase};
     use crate::selector::VersionReq;
     use core::str::FromStr;
+    use crate::model::{CamelCase, Domain, SkewerCase};
 
     fn create_specific() -> Specific {
         Specific::new(

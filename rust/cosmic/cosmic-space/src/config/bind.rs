@@ -7,11 +7,12 @@ use serde::{Deserialize, Serialize};
 use crate::command::direct::Cmd;
 use crate::err::SpaceErr;
 use crate::loc::{Point, PointCtx, PointVar, Topic};
+use crate::model::Env;
 use crate::parse::model::{
     BindScope, MethodScope, PipelineSegment, PipelineSegmentDef, PipelineVar, RouteScope,
     ScopeFilters, WaveScope,
 };
-use crate::parse::{bind_config, Env};
+use crate::parse::bind_config;
 use crate::selector::PayloadBlock;
 use crate::selector::PayloadBlockDef;
 use crate::substance::{Call, CallDef, Substance, SubstancePattern};

@@ -13,10 +13,11 @@ use cosmic_nom::new_span;
 use crate::err::SpaceErr;
 use crate::loc::Point;
 use crate::parse::error::result;
-use crate::parse::{particle_perms, permissions, permissions_mask, privilege, MapResolver};
+use crate::parse::{particle_perms, permissions, permissions_mask, privilege};
 use crate::selector::{PointHierarchy, PointSelector};
 use crate::wave::ScopeGrant;
 use crate::Agent;
+use crate::model::MapResolver;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Access {

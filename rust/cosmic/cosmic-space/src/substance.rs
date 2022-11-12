@@ -16,7 +16,7 @@ use crate::hyper::{Greet, HyperSubstance, Knock, ParticleLocation};
 use crate::loc::{Meta, PointCtx, PointVar};
 use crate::log::{AuditLog, Log, LogSpan, LogSpanEvent, PointlessLog};
 use crate::parse::model::Subst;
-use crate::parse::Env;
+use crate::model::Env;
 use crate::particle::Particle;
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::wave::core::cmd::CmdMethod;

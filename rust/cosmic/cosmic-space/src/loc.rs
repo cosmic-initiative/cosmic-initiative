@@ -15,18 +15,18 @@ use crate::hyper::ChildRegistry;
 use crate::log::{SpanLogger, Trackable};
 use crate::parse::error::result;
 use crate::parse::{
-    consume_point, consume_point_ctx, kind_parts, parse_star_key, point_and_kind,
-    point_route_segment, point_selector, point_var, CamelCase, Domain, Env, ResolverErr,
-    SkewerCase,
+    consume_point, consume_point_ctx, parse_star_key,
+    point_route_segment, point_var, ResolverErr,
 };
 use crate::particle::traversal::TraversalPlan;
 use crate::selector::{Pattern, SpecificSelector, VersionReq};
-use crate::util::{uuid, ToResolved, ValueMatcher, ValuePattern};
+use crate::util::{ToResolved, uuid, ValueMatcher, ValuePattern};
 use crate::wave::exchange::asynch::Exchanger;
 use crate::wave::{Agent, DirectedWave, Ping, Pong, Recipients, ReflectedWave, SingularDirectedWave, ToRecipients, UltraWave, Wave};
 use crate::Agent::Anonymous;
 use crate::{ANONYMOUS, HYPERUSER};
 use crate::kind2::KindCat;
+use crate::model::{CamelCase, Domain, Env, SkewerCase};
 
 lazy_static! {
     pub static ref CENTRAL: Point = StarKey::central().to_point();
@@ -2019,6 +2019,15 @@ impl FromStr for StarKey {
 #[async_trait]
 pub trait PointFactory: Send + Sync {
     async fn create(&self) -> Result<Point, SpaceErr>;
+}
+
+pub mod parse {
+    use cosmic_nom::{Res, Span};
+    use crate::selector::{PointSelector, PointSelectorVar};
+
+    pub fn point_selector_var<I:Span>(input: I) -> Res<I,PointSelectorVar> {
+        todo!()
+    }
 }
 
 #[cfg(test)]

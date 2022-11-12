@@ -40,14 +40,13 @@ use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::{Location, ParticleLocation, ParticleRecord};
 use cosmic_space::loc::{Point, PointSeg, StarKey, ToBaseKind, Version};
 use cosmic_space::log::PointLogger;
-use cosmic_space::parse::{CamelCase, Domain, SkewerCase};
 use cosmic_space::particle::{Details, PointKind, Properties, Property, Status, Stub};
 use cosmic_space::security::{
     Access, AccessGrant, AccessGrantKind, EnumeratedAccess, IndexedAccessGrant, Permissions,
     PermissionsMask, PermissionsMaskKind, Privilege, Privileges,
 };
 use cosmic_space::selector::specific::{
-    ProductSelector, ProviderSelector, ProductVariantSelector, VendorSelector,
+    ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector,
 };
 use cosmic_space::selector::{
     ExactPointSeg, KindBaseSelector, PointHierarchy, PointKindSeg, PointSegSelector, Selector,
@@ -56,6 +55,7 @@ use cosmic_space::selector::{
 use cosmic_space::substance::{Substance, SubstanceList, SubstanceMap};
 use cosmic_space::util::ValuePattern;
 use cosmic_space::HYPERUSER;
+use cosmic_space::model::{CamelCase, Domain, SkewerCase};
 
 pub trait PostgresPlatform: Cosmos
 where

@@ -13,19 +13,18 @@ use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, Vendor
 use crate::kind2::{Kind, ProtoKindSelector, Specific};
 use crate::loc::{
     Layer, PointCtx, PointSeg, PointSegCtx, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic,
-    VarVal, Variable, Version,
+    Variable, VarVal, Version,
 };
 use crate::parse::error::result;
-use crate::parse::{
-    consume_hierarchy, kind_selector, point_segment_selector, point_selector, specific_selector,
-    CamelCase, Env,
-};
+use crate::parse::point_segment_selector;
 use crate::substance::{
     CallWithConfigDef, Substance, SubstanceFormat, SubstanceKind, SubstancePattern,
     SubstancePatternCtx, SubstancePatternDef,
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
+use crate::kind2::parse::specific_selector;
+use crate::model::{CamelCase, Env};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct VersionReq {
@@ -252,13 +251,7 @@ pub type SpecificSelector = SpecificSelectorDef<
     VersionReq,
 >;
 
-impl FromStr for SpecificSelector {
-    type Err = SpaceErr;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        result(all_consuming(specific_selector)(new_span(s)))
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct SpecificSelectorDef<
@@ -308,7 +301,7 @@ pub mod specific {
     use core::str::FromStr;
 
     use crate::err::SpaceErr;
-    use crate::parse::{Domain, SkewerCase};
+    use crate::model::{Domain, SkewerCase};
     use crate::selector::Pattern;
 
     pub struct VersionReq {
@@ -616,13 +609,6 @@ impl ToString for PointKindSeg {
     }
 }
 
-impl FromStr for PointHierarchy {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(consume_hierarchy(new_span(s))?)
-    }
-}
 
 pub type PayloadBlock = PayloadBlockDef<Point>;
 pub type PayloadBlockCtx = PayloadBlockDef<PointCtx>;

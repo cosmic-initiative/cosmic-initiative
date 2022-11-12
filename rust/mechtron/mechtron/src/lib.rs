@@ -30,7 +30,7 @@ use cosmic_space::err::SpaceErr;
 use cosmic_space::hyper::HyperSubstance;
 use cosmic_space::loc::{Layer, Point, ToSurface, Uuid};
 use cosmic_space::log::{LogSource, NoAppender, PointLogger, RootLogger};
-use cosmic_space::parse::SkewerCase;
+use cosmic_space::model::SkewerCase;
 use cosmic_space::particle::{Details, Stub};
 use cosmic_space::wasm::Timestamp;
 use cosmic_space::wave::exchange::SetStrategy;

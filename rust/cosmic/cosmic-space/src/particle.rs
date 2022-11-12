@@ -7,11 +7,12 @@ use serde::{Deserialize, Serialize};
 
 use cosmic_nom::{new_span, Res, Span};
 use crate::err::SpaceErr;
-use crate::kind2::{KindCat, Kind};
+use crate::kind2::{Kind, KindCat};
 
 use crate::loc::{Point, PointCtx, PointVar};
+use crate::model::Env;
 use crate::parse::error::result;
-use crate::parse::{parse_alpha1_str, point_and_kind, Env};
+use crate::parse::parse_alpha1_str;
 use crate::substance::Substance;
 use crate::util::ToResolved;
 
@@ -260,6 +261,12 @@ pub struct PointKindDef<Pnt> {
     pub kind: Kind,
 }
 
+impl <Pnt> ToString for PointKindDef<Pnt> where Pnt: ToString {
+    fn to_string(&self) -> String {
+        format!("{}<{}>", self.point.to_string(), self.kind.to_string() )
+    }
+}
+
 impl ToResolved<PointKindCtx> for PointKindVar {
     fn to_resolved(self, env: &Env) -> Result<PointKindCtx, SpaceErr> {
         Ok(PointKindCtx {
@@ -293,21 +300,7 @@ impl PointKind {
     }
 }
 
-impl ToString for PointKind {
-    fn to_string(&self) -> String {
-        format!("{}<{}>", self.point.to_string(), self.kind.to_string())
-    }
-}
 
-impl FromStr for PointKind {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let point_and_kind: PointKindVar = result(all_consuming(point_and_kind)(new_span(s)))?;
-        let point_and_kind = point_and_kind.collapse()?;
-        Ok(point_and_kind)
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct AddressAndType {

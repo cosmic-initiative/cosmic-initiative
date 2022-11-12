@@ -14,11 +14,12 @@ use direct::set::{Set, SetCtx, SetVar};
 use direct::write::{Write, WriteCtx, WriteVar};
 
 use crate::parse::error::result;
-use crate::parse::{command_line, Env};
+use crate::parse::command_line;
 use crate::substance::{Bin, ChildSubstance};
 use crate::util::ToResolved;
 use crate::wave::core::cmd::CmdMethod;
 use crate::{Delete, Select, SpaceErr};
+use crate::model::Env;
 
 pub mod common {
     use std::collections::hash_map::Iter;
@@ -265,7 +266,7 @@ pub mod direct {
         use crate::command::common::SetProperties;
         use crate::err::SpaceErr;
         use crate::loc::{Point, PointCtx, PointVar};
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::util::ToResolved;
 
         pub type Set = SetDef<Point>;
@@ -310,7 +311,7 @@ pub mod direct {
         use crate::command::common::SetProperties;
         use crate::err::SpaceErr;
         use crate::loc::{Point, PointCtx, PointVar};
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::util::ToResolved;
 
         pub type Get = GetDef<Point>;
@@ -368,8 +369,9 @@ pub mod direct {
         use crate::err::SpaceErr;
         use crate::kind2::ProtoKindSelector;
         use crate::loc::{HostKey, Point, PointCtx, PointFactory, PointSeg, PointVar, ToSurface};
+        use crate::model::{CamelCase, Env};
         use crate::parse::model::Subst;
-        use crate::parse::{CamelCase, Env, ResolverErr};
+        use crate::parse::ResolverErr;
         use crate::selector::SpecificSelector;
         use crate::substance::Bin;
         use crate::substance::Substance;
@@ -657,7 +659,7 @@ pub mod direct {
         use crate::err::SpaceErr;
         use crate::fail::{BadCoercion, Fail};
         use crate::loc::Point;
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::particle::Stub;
         use crate::selector::{PointHierarchy, PointSelector, PointSelectorCtx, PointSelectorVar, SelectorDef};
         use crate::substance::{MapPattern, Substance, SubstanceList};
@@ -744,7 +746,7 @@ pub mod direct {
 
         use crate::command::direct::select::{PropertiesPattern, Select, SelectIntoSubstance};
         use crate::err::SpaceErr;
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::selector::{PointSelector, PointSelectorCtx, PointSelectorVar, SelectorDef};
         use crate::util::ToResolved;
 
@@ -794,7 +796,7 @@ pub mod direct {
         use crate::command::common::SetProperties;
         use crate::err::SpaceErr;
         use crate::loc::{Point, PointCtx, PointVar};
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::substance::Substance;
         use crate::util::ToResolved;
 
@@ -832,7 +834,7 @@ pub mod direct {
 
         use crate::err::SpaceErr;
         use crate::loc::{Point, PointCtx, PointVar};
-        use crate::parse::Env;
+        use crate::model::Env;
         use crate::substance::Substance;
         use crate::util::ToResolved;
 

@@ -6,7 +6,7 @@ use validator::validate_email;
 
 use crate::command::common::PropertyMod;
 use crate::loc::Point;
-use crate::parse::SkewerCase;
+use crate::model::SkewerCase;
 use crate::{SetProperties, SpaceErr};
 use crate::kind2::KindCat;
 
