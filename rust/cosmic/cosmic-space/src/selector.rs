@@ -748,10 +748,15 @@ impl PointSelector {
             return false;
         }
 
+        if point.segments.len() < self.segments.len() {
+            return false;
+        }
+
         if !point.segments.is_empty() {
             let mut index = 0usize;
             for seg in 0usize..point.segments.len() {
                 if index >= self.segments.len() {
+println!("OUT OF SELECTRORS");
                     return false;
                 }
 
@@ -772,6 +777,8 @@ impl PointSelector {
                     if next_selector.is_match(next_segment) {
                         index = index + 1usize;
                     }
+                } else if selector.is_recursive() {
+                    // do nothing
                 } else {
                     index = index + 1usize;
                 }

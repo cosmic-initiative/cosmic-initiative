@@ -210,6 +210,38 @@ pub mod test {
             assert!(selector.is_match(&p1));
             assert!(!selector.is_match(&p2));
         }
+
+
+        {
+            let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
+            let p2= result(all_consuming(point)(new_span("localhost:grond"))).unwrap();
+            let selector : PointSelector= log(result(all_consuming(point_selector)(new_span("localhost:*")))).unwrap();
+            assert!(selector.is_match(&p2));
+            assert!(!selector.is_match(&p1));
+        }
+
+
+        {
+            let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
+            let p2= result(all_consuming(point)(new_span("localhost:grond"))).unwrap();
+            let p3= result(all_consuming(point)(new_span("localhost:grond:zophis"))).unwrap();
+            let selector : PointSelector= log(result(all_consuming(point_selector)(new_span("localhost:**")))).unwrap();
+            assert!(!selector.is_match(&p1));
+            assert!(selector.is_match(&p2));
+            assert!(selector.is_match(&p3));
+        }
+
+
+
+        {
+            let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
+            let p2= result(all_consuming(point)(new_span("localhost:grond"))).unwrap();
+            let p3= result(all_consuming(point)(new_span("localhost:grond:zophis"))).unwrap();
+            let selector : PointSelector= log(result(all_consuming(point_selector)(new_span("localhost:**:zophis")))).unwrap();
+            assert!(!selector.is_match(&p1));
+            assert!(!selector.is_match(&p2));
+            assert!(selector.is_match(&p3));
+        }
     }
 
 
