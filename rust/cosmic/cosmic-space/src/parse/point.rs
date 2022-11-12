@@ -211,7 +211,6 @@ pub mod test {
             assert!(!selector.is_match(&p2));
         }
 
-
         {
             let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
             let p2= result(all_consuming(point)(new_span("localhost:grond"))).unwrap();
@@ -219,7 +218,6 @@ pub mod test {
             assert!(selector.is_match(&p2));
             assert!(!selector.is_match(&p1));
         }
-
 
         {
             let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
@@ -230,8 +228,6 @@ pub mod test {
             assert!(selector.is_match(&p2));
             assert!(selector.is_match(&p3));
         }
-
-
 
         {
             let p1= result(all_consuming(point)(new_span("localhost"))).unwrap();
