@@ -71,7 +71,6 @@ use crate::config::Document;
 use crate::err::report::{Label, Report, ReportKind};
 use crate::err::{ParseErrs, SpaceErr};
 use crate::kind::{Kind, KindCat, KindSelector, Pattern, Specific};
-use crate::point::parse::point_selector_var;
 use crate::point::StarKey;
 use crate::point::{
     Layer, Point, PointCtx, PointSeg, PointSegCtx, PointSegDelim, PointSegment, PointSegVar,
@@ -1468,6 +1467,8 @@ pub fn get<I: Span>(input: I) -> Res<I, GetVar> {
 }
 
 pub fn select<I: Span>(input: I) -> Res<I, SelectVar> {
+    todo!()
+    /*
     point_selector_var(input).map(|(next, point_kind_pattern)| {
         let select = SelectVar {
             pattern: point_kind_pattern,
@@ -1476,6 +1477,8 @@ pub fn select<I: Span>(input: I) -> Res<I, SelectVar> {
         };
         (next, select)
     })
+
+     */
 }
 
 pub fn publish<I: Span>(input: I) -> Res<I, CreateVar> {
@@ -4547,6 +4550,7 @@ pub fn point_segment_selector<I: Span>(input: I) -> Res<I, PointSegSelector> {
         any_segment,
     ))(input)
 }
+
 
 fn base_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
     alt((recursive_segment, any_segment, exact_base_segment))(input)

@@ -1,14 +1,16 @@
 use crate::parse::{
-    base_segment, file_chars, point_route_segment, skewer, skewer_case, var_route, version,
+    base_segment, file_chars, point_route_segment,  skewer, skewer_case,
+    var_route, version, version_req,
 };
 use crate::point::{Point, PointDef, PointSeg, PointSegment, RouteSeg};
+use crate::selector::{ExactPointSeg, PointSegSelector, PointSelector};
 use cosmic_nom::{Res, Span};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::combinator::{opt, peek};
+use nom::combinator::{opt, peek, value};
 use nom::error::context;
 use nom::multi::{many0, many1, separated_list0, separated_list1};
-use nom::sequence::{pair, preceded, terminated, tuple};
+use nom::sequence::{delimited, pair, preceded, terminated, tuple};
 
 pub fn point_def<I, Route, Segment, FnRoute, FnBaseSegment, FnFileSysSegment>(
     fn_route: FnRoute,
@@ -27,10 +29,7 @@ where
         tuple((
             opt(terminated(fn_route, tag("::"))),
             separated_list1(tag(":"), fn_segment),
-            opt(preceded(
-                tag(":/"),
-                many0(fn_fs_segment),
-            )),
+            opt(preceded(tag(":/"), many0(fn_fs_segment))),
         ))(input)
         .map(|(next, (route, mut base_segments, mut fs_segments))| {
             let mut segments = vec![];
@@ -62,6 +61,54 @@ where
     )(input)
 }
 
+fn point_segment_selector<I>(input: I) -> Res<I, PointSegSelector>
+where
+    I: Span,
+{
+    context(
+        "point-segment-selector",
+        alt((
+            value(PointSegSelector::InclusiveAny, tag("+:*")),
+            value(PointSegSelector::InclusiveRecursive, tag("+:**")),
+            value(PointSegSelector::Recursive, tag("**")),
+            value(PointSegSelector::Any, tag("*")),
+            base_point_segment_selector,
+            version_req_segment,
+        )),
+    )(input)
+}
+
+fn file_segment_selector<I>(input: I) -> Res<I, PointSegSelector>
+where
+    I: Span,
+{
+    context(
+        "point-segment-selector",
+        alt((
+            value(PointSegSelector::InclusiveAny, tag("+:*")),
+            value(PointSegSelector::InclusiveRecursive, tag("+:**")),
+            value(PointSegSelector::Recursive, tag("**")),
+            value(PointSegSelector::Any, tag("*")),
+            filesys_point_segment_selector,
+            version_req_segment,
+        )),
+    )(input)
+}
+
+fn base_point_segment_selector<I: Span>(input: I) -> Res<I, PointSegSelector> {
+    base_point_segment(input)
+        .map(|(next, base)| (next, PointSegSelector::Exact(ExactPointSeg::PointSeg(base))))
+}
+
+fn filesys_point_segment_selector<I: Span>(input: I) -> Res<I, PointSegSelector> {
+    filesys_point_segment(input)
+        .map(|(next, base)| (next, PointSegSelector::Exact(ExactPointSeg::PointSeg(base))))
+}
+
+fn version_req_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
+    delimited(tag("("), version_req, tag(")"))(input)
+        .map(|(next, version_req)| (next, PointSegSelector::Version(version_req)))
+}
 fn base_point_segment<I>(input: I) -> Res<I, PointSeg>
 where
     I: Span,
@@ -108,15 +155,25 @@ where
     point_def(point_route_segment, point_segment, filesys_point_segment)(input)
 }
 
+pub fn point_selector<I>(input: I) -> Res<I, PointSelector>
+where
+    I: Span,
+{
+    point_def(
+        point_route_segment,
+        point_segment_selector,
+        filesys_point_segment_selector,
+    )(input)
+}
 
 #[cfg(test)]
 pub mod test {
-    use nom::combinator::{all_consuming};
-    use cosmic_nom::new_span;
     use crate::parse::error::result;
     use crate::parse::point::point;
     use crate::parse::skewer_case;
     use crate::point::{Point, PointSeg};
+    use cosmic_nom::new_span;
+    use nom::combinator::all_consuming;
 
     #[test]
     pub fn test_point() {
@@ -128,7 +185,6 @@ pub mod test {
 
         let skewer = result(skewer_case(new_span("xyzBad"))).unwrap();
 
-        assert_eq!(skewer.to_string().as_str(),"xyz");
+        assert_eq!(skewer.to_string().as_str(), "xyz");
     }
-
 }

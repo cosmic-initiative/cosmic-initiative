@@ -1184,6 +1184,8 @@ impl TrackRegex {
 
 impl TrackDef<String> {
     pub fn new<S: ToString>(selector: S, stop: S, action: S) -> Result<Self, SpaceErr> {
+        todo!()
+        /*
         let selector = PointSelector::from_str(selector.to_string().as_str())?;
         Regex::from_str(stop.to_string().as_str())?;
         Regex::from_str(action.to_string().as_str())?;
@@ -1196,6 +1198,8 @@ impl TrackDef<String> {
             stop,
             action,
         })
+
+         */
     }
 
     pub fn to_regex(&self) -> Result<TrackRegex, SpaceErr> {

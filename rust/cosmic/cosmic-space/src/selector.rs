@@ -11,10 +11,7 @@ use cosmic_nom::{new_span, Trace};
 use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector};
 
 use crate::kind::{Kind, ProtoKindSelector, Specific};
-use crate::point::{
-    Layer, PointCtx, PointSeg, PointSegCtx, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic,
-    Variable, VarVal, Version,
-};
+use crate::point::{Layer, PointCtx, PointDef, PointSeg, PointSegCtx, PointSegment, PointSegVar, PointVar, RouteSeg, ToBaseKind, Topic, Variable, VarVal, Version};
 use crate::parse::error::result;
 use crate::parse::point_segment_selector;
 use crate::substance::{
@@ -111,6 +108,12 @@ pub enum PointSegSelector {
     Recursive,          // **
     Exact(ExactPointSeg),
     Version(VersionReq),
+}
+
+impl PointSegment for PointSegSelector{
+    fn file_sys_root() -> Self {
+        Self::Exact(ExactPointSeg::PointSeg(PointSeg::FileSysRootDir))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -698,7 +701,7 @@ impl ToResolved<PayloadBlock> for PayloadBlockVar {
     }
 }
 
-pub type PointSelector = PointSelectorDef<PointSeg>;
+pub type PointSelector = PointDef<RouteSeg,PointSegSelector>;
 pub type PointSelectorCtx = PointSelectorDef<PointSegCtx>;
 pub type PointSelectorVar = PointSelectorDef<PointSegVar>;
 

@@ -2031,14 +2031,7 @@ pub trait PointFactory: Send + Sync {
     async fn create(&self) -> Result<Point, SpaceErr>;
 }
 
-pub mod parse {
-    use cosmic_nom::{Res, Span};
-    use crate::selector::{PointSelector, PointSelectorVar};
 
-    pub fn point_selector_var<I:Span>(input: I) -> Res<I,PointSelectorVar> {
-        todo!()
-    }
-}
 
 #[cfg(test)]
 pub mod test {
