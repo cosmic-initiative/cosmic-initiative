@@ -53,6 +53,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot, watch, RwLock};
+use cosmic_space::kind::KindSelector;
 
 lazy_static! {
     static ref DEFAULT_BIND: ArtRef<BindConfig> = ArtRef::new(
@@ -1598,7 +1599,7 @@ pub trait HyperDriverFactory<P>: Send + Sync
 where
     P: Cosmos,
 {
-    fn kind(&self) -> ProtoKindSelector;
+    fn kind(&self) -> KindSelector;
 
     fn avail(&self) -> DriverAvail {
         DriverAvail::External

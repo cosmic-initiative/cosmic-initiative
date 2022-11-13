@@ -19,7 +19,7 @@ use cosmic_space::log::{Trackable, Tracker};
 use cosmic_space::parse::bind_config;
 use cosmic_space::particle::traversal::TraversalInjection;
 use cosmic_space::particle::Status;
-use cosmic_space::selector::{ProtoKindSelector, Pattern, SubKindSelector};
+use cosmic_space::selector::{ProtoKindSelector, Pattern };
 use cosmic_space::substance::Substance;
 use cosmic_space::util::{log, ValuePattern};
 use cosmic_space::wave::core::http2::StatusCode;
@@ -43,6 +43,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::error;
+use cosmic_space::kind::StarVariant;
 
 lazy_static! {
     static ref STAR_BIND_CONFIG: ArtRef<BindConfig> = ArtRef::new(
@@ -145,7 +146,7 @@ impl<P> StarDriverFactory<P>
 where
     P: Cosmos + 'static,
 {
-    pub fn new(sub: StarSub) -> Self {
+    pub fn new(sub: StarVariant) -> Self {
         let kind = ProtoKindSelector {
             base: Pattern::Exact(BaseKind::Star),
             sub: SubKindSelector::Exact(Some(sub.to_camel_case())),

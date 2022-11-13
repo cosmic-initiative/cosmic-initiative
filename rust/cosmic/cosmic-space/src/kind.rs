@@ -84,7 +84,14 @@ where
 
 impl Default for Kind {
     fn default() -> Self {
-        todo!()
+        Kind {
+            parent: KindSubTypes {
+                part: KindCat::Root,
+                sub: None,
+                r#type: None
+            },
+            child: None
+        }
     }
 }
 
@@ -233,6 +240,7 @@ pub enum KindCat {
     Base,
     Account,
     Mechtron,
+    Host,
     Artifact,
     Control,
     Portal,
@@ -359,6 +367,22 @@ impl Kind {
 impl ToString for VariantFull {
     fn to_string(&self) -> String {
         todo!()
+    }
+}
+
+impl Kind {
+    pub fn cat(cat: KindCat) -> Self {
+        Self {
+            parent: KindSubTypes {
+                part: cat,
+                sub: None,
+                r#type: None
+            },
+            child: None
+        }
+    }
+    pub fn to_cat(&self) -> KindCat {
+        self.parent.part.clone()
     }
 }
 
@@ -661,6 +685,19 @@ pub type VariantSelector =
 
 pub type KindSelector =
     KindDef<Pattern<KindFullSubTypesSelector>, OptPattern<VariantSelector>>;
+
+impl KindSelector {
+    pub fn from_cat(cat: KindCat ) -> Self {
+        Self {
+            parent: Pattern::Matches(KindFullSubTypesSelector {
+                part: Pattern::Matches(cat),
+                sub: OptPattern::None,
+                r#type: OptPattern::None
+            }),
+            child: OptPattern::None
+        }
+    }
+}
 
 pub mod parse {
 

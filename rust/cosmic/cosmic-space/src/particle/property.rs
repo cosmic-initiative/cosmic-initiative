@@ -8,7 +8,7 @@ use crate::command::common::PropertyMod;
 use crate::point::Point;
 use crate::model::SkewerCase;
 use crate::{SetProperties, SpaceErr};
-use crate::kind::KindCat;
+use crate::kind::{Kind, KindCat};
 
 pub struct PropertyDef {
     pub pattern: Box<dyn PropertyPattern>,
@@ -144,7 +144,7 @@ pub enum PropertySource {
 
 pub struct PropertiesConfig {
     pub properties: HashMap<String, PropertyDef>,
-    pub kind: KindCat,
+    pub kind: Kind,
 }
 
 impl Deref for PropertiesConfig {
@@ -156,7 +156,7 @@ impl Deref for PropertiesConfig {
 }
 
 impl PropertiesConfig {
-    pub fn new(kind: KindCat) -> PropertiesConfig {
+    pub fn new(kind: Kind) -> PropertiesConfig {
         Self {
             properties: HashMap::new(),
             kind,
@@ -318,7 +318,7 @@ pub enum PropertyPermit {
 }
 
 pub struct PropertiesConfigBuilder {
-    kind: Option<KindCat>,
+    kind: Option<Kind>,
     properties: HashMap<String, PropertyDef>,
 }
 
@@ -341,7 +341,7 @@ impl PropertiesConfigBuilder {
         })
     }
 
-    pub fn kind(&mut self, kind: KindCat) {
+    pub fn kind(&mut self, kind: Kind) {
         self.kind.replace(kind);
     }
 

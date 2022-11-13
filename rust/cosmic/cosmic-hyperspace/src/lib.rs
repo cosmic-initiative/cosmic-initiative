@@ -31,13 +31,14 @@ use uuid::Uuid;
 use cosmic_hyperlane::{HyperAuthenticator, HyperGate, HyperGateSelector, HyperwayEndpointFactory};
 use cosmic_space::artifact::asynch::ArtifactApi;
 use cosmic_space::command::common::{SetProperties, SetRegistry};
-use cosmic_space::command::direct::create::{KindTemplate, Strategy};
+use cosmic_space::command::direct::create::{Strategy};
 use cosmic_space::command::direct::delete::Delete;
 use cosmic_space::command::direct::query::{Query, QueryResult};
-use cosmic_space::command::direct::select::{Select, SubSelect};
+use cosmic_space::command::direct::select::{Select};
 use cosmic_space::err::SpaceErr;
 use cosmic_space::fail::Timeout;
 use cosmic_space::hyper::{ParticleLocation, ParticleRecord};
+use cosmic_space::kind::{Kind, KindCat, KindSelector};
 use cosmic_space::point::{
     Layer, MachineName, Point, RouteSeg, StarKey, Surface, ToBaseKind, ToSurface,
 };
@@ -46,7 +47,6 @@ use cosmic_space::particle::property::{PropertiesConfig, PropertiesConfigBuilder
 use cosmic_space::particle::{Details, Properties, Status, Stub};
 use cosmic_space::security::IndexedAccessGrant;
 use cosmic_space::security::{Access, AccessGrant};
-use cosmic_space::selector::Selector;
 use cosmic_space::settings::Timeouts;
 use cosmic_space::substance::{Substance, SubstanceList, Token};
 use cosmic_space::wave::core::http2::StatusCode;
@@ -112,12 +112,12 @@ where
     fn properties_config(&self, kind: &Kind) -> PropertiesConfig {
         let mut builder = PropertiesConfigBuilder::new();
         builder.kind(kind.clone());
-        match kind.to_base() {
-            BaseKind::Mechtron => {
+        match kind.to_cat() {
+            KindCat::Mechtron => {
                 builder.add_point("config", true, true).unwrap();
                 builder.build().unwrap()
             }
-            BaseKind::Host => {
+            KindCat::Host => {
                 builder.add_point("bin", true, true).unwrap();
                 builder.build().unwrap()
             }
@@ -142,61 +142,7 @@ where
         "./data/".to_string()
     }
 
-    fn select_kind(&self, template: &KindTemplate) -> Result<Kind, SpaceErr> {
-        let base: BaseKind = BaseKind::from_str(template.base.to_string().as_str())?;
-        Ok(match base {
-            BaseKind::Root => Kind::Root,
-            BaseKind::Space => Kind::Space,
-            BaseKind::Base => Kind::Base,
-            BaseKind::User => Kind::User,
-            BaseKind::App => Kind::App,
-            BaseKind::Mechtron => Kind::Mechtron,
-            BaseKind::FileSystem => Kind::FileSystem,
-            BaseKind::File => match &template.sub {
-                None => return Err("expected kind for File".into()),
-                Some(kind) => {
-                    let file_kind = FileSubKind::from_str(kind.as_str())?;
-                    return Ok(Kind::File(file_kind));
-                }
-            },
-            BaseKind::Database => {
-                unimplemented!("need to write a SpecificPattern matcher...")
-            }
-            BaseKind::BundleSeries => Kind::BundleSeries,
-            BaseKind::Bundle => Kind::Bundle,
-            BaseKind::Artifact => match &template.sub {
-                None => {
-                    return Err("expected Sub for Artirtact".into());
-                }
-                Some(sub) => {
-                    let artifact_kind = ArtifactSubKind::from_str(sub.as_str())?;
-                    return Ok(Kind::Artifact(artifact_kind));
-                }
-            },
-            BaseKind::Control => Kind::Control,
-            BaseKind::UserBase => match &template.sub {
-                None => {
-                    return Err("SubKind must be set for UserBase<?>".into());
-                }
-                Some(sub) => {
-                    let specific =
-                        Specific::from_str("starlane.io:redhat.com:keycloak:community:18.0.0")?;
-                    let sub = UserBaseSubKind::OAuth(specific);
-                    Kind::UserBase(sub)
-                }
-            },
-            BaseKind::Repo => Kind::Repo,
-            BaseKind::Portal => Kind::Portal,
-            BaseKind::Star => {
-                unimplemented!()
-            }
-            BaseKind::Driver => Kind::Driver,
-            BaseKind::Global => Kind::Global,
-            BaseKind::Host => Kind::Host,
-            BaseKind::Guest => Kind::Guest,
-            BaseKind::Native => Kind::Native(NativeSub::Web),
-        })
-    }
+    fn select_kind(&self, selector: &KindSelector) -> Result<Kind, SpaceErr>;
 
     fn log<R>(result: Result<R, Self::Err>) -> Result<R, Self::Err> {
         if let Err(err) = result {

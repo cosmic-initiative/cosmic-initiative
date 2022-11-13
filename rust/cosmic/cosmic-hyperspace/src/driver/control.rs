@@ -13,7 +13,7 @@ use cosmic_hyperlane::{
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::command::common::StateSrc;
 use cosmic_space::command::direct::create::{
-    Create, KindTemplate, PointSegTemplate, PointTemplate, Strategy, Template,
+    Create,  PointSegTemplate, PointTemplate, Strategy, Template,
 };
 use cosmic_space::command::RawCommand;
 use cosmic_space::config::bind::BindConfig;
@@ -37,6 +37,7 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use cosmic_space::kind::{KindCat, KindSelector};
 
 pub struct ControlDriverFactory<P>
 where
@@ -50,8 +51,8 @@ impl<P> HyperDriverFactory<P> for ControlDriverFactory<P>
 where
     P: Cosmos,
 {
-    fn kind(&self) -> ProtoKindSelector {
-        ProtoKindSelector::from_base(BaseKind::Control)
+    fn kind(&self) -> KindSelector{
+        KindSelector::from_cat(KindCat::Control)
     }
 
     fn avail(&self) -> DriverAvail {

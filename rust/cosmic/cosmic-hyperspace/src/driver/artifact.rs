@@ -13,7 +13,7 @@ use acid_store::store::MemoryConfig;
 use cosmic_space::artifact::ArtRef;
 use cosmic_space::command::common::{SetProperties, StateSrc};
 use cosmic_space::command::direct::create::{
-    Create, KindTemplate, PointSegTemplate, PointTemplate, Strategy, Template,
+    Create, PointSegTemplate, PointTemplate, Strategy, Template,
 };
 use cosmic_space::config::bind::BindConfig;
 use cosmic_space::err::SpaceErr;
@@ -36,6 +36,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use tempdir::TempDir;
+use cosmic_space::kind::Kind;
 
 lazy_static! {
     static ref REPO_BIND_CONFIG: ArtRef<BindConfig> = ArtRef::new(
@@ -153,7 +154,7 @@ where
     P: Cosmos,
 {
     fn kind(&self) -> Kind {
-        Kind::Repo
+        Kind::cat()
     }
 
     async fn item(&self, point: &Point) -> Result<ItemSphere<P>, P::Err> {
