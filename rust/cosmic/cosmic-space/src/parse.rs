@@ -86,12 +86,13 @@ use crate::security::{
 };
 use crate::selector::specific::{ProductSelector, VariantSelector, VendorSelector};
 use crate::selector::{
-    ExactPointSeg, Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef, MapEntryPattern,
+    Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef, MapEntryPattern,
     MapEntryPatternCtx, MapEntryPatternVar, Pattern, PatternBlock, PatternBlockCtx,
     PatternBlockVar, PayloadBlock, PayloadBlockCtx, PayloadBlockVar, PayloadType2Def,
-    PointHierarchy, PointKindSeg, PointSegSelector, Selector, SelectorDef, SpecificSelector,
+    PointHierarchy, PointKindSeg,  Selector, SelectorDef, SpecificSelector,
     SubKindSelector, UploadBlock, VersionReq,
 };
+use crate::selector2::{ExactPointSeg, PointSegSelector};
 use crate::substance::Bin;
 use crate::substance::{
     Call, CallCtx, CallKind, CallVar, CallWithConfig, CallWithConfigCtx, CallWithConfigVar,
@@ -4857,9 +4858,9 @@ pub mod error {
     };
     use crate::particle::PointKindVar;
     use crate::selector::{
-        ExactPointSeg, Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef,
+        Hop, KindBaseSelector, KindSelector, LabeledPrimitiveTypeDef,
         MapEntryPattern, MapEntryPatternVar, Pattern, PatternBlockVar, PayloadBlockVar,
-        PayloadType2Def, PointSegSelector, SelectorDef, SpecificSelector, SubKindSelector,
+        PayloadType2Def,  SelectorDef, SpecificSelector, SubKindSelector,
         UploadBlock, VersionReq,
     };
     use crate::substance::{
@@ -5129,17 +5130,6 @@ fn recursive_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
     tag("**")(input).map(|(next, _)| (next, PointSegSelector::Recursive))
 }
 
-fn exact_space_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
-    point_segment_chars(input).map(|(next, segment)| {
-        (
-            next,
-            PointSegSelector::Exact(ExactPointSeg::PointSeg(PointSeg::Space(
-                segment.to_string(),
-            ))),
-        )
-    })
-}
-
 fn exact_base_segment<I: Span>(input: I) -> Res<I, PointSegSelector> {
     point_segment_chars(input).map(|(next, segment)| {
         (
@@ -5193,7 +5183,6 @@ pub fn point_segment_selector<I: Span>(input: I) -> Res<I, PointSegSelector> {
         inclusive_any_segment,
         recursive_segment,
         any_segment,
-        exact_space_segment,
     ))(input)
 }
 

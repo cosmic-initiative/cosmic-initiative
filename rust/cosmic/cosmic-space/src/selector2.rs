@@ -1,5 +1,6 @@
 use core::fmt::Formatter;
 use core::str::FromStr;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 use nom::combinator::all_consuming;
@@ -7,16 +8,13 @@ use serde::de::{Error, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use cosmic_nom::{new_span, Trace};
-use specific::{ProductSelector, ProviderSelector, VariantSelector, VendorSelector};
+use specific::{ProductSelector, ProductVariantSelector, ProviderSelector, VendorSelector};
 
-use crate::kind::{BaseKind, Kind, KindParts, Specific};
-use crate::loc::{
-    Layer, PointCtx, PointSeg, PointVar, RouteSeg, ToBaseKind, Topic, VarVal, Variable, Version,
-};
 use crate::parse::error::result;
-use crate::parse::{
-    consume_hierarchy, kind_selector, point_segment_selector, point_selector, specific_selector,
-    CamelCase, Env,
+use crate::parse::{Env, point_segment_selector};
+use crate::loc::{
+    Layer, PointCtx, PointDef, PointSeg, PointSegCtx, PointSegVar, PointSegment, PointVar,
+    RouteSeg, ToBaseKind, Topic, VarVal, Variable, Version,
 };
 use crate::substance::{
     CallWithConfigDef, Substance, SubstanceFormat, SubstanceKind, SubstancePattern,
@@ -24,369 +22,164 @@ use crate::substance::{
 };
 use crate::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::{Point, SpaceErr};
-use crate::selector2::{ExactPointSeg, PointSegSelector, PointSegSelectorCtx, PointSegSelectorVar};
+use crate::kind2::Specific;
+use crate::kind::Kind;
+use crate::selector::VersionReq;
 
-pub type KindSelector = KindSelectorDef<KindBaseSelector, SubKindSelector, SpecificSelector>;
-pub type KindSelectorVar =
-    KindSelectorDef<VarVal<KindBaseSelector>, VarVal<SubKindSelector>, VarVal<SpecificSelector>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct KindSelectorDef<GenericKindSelector, GenericSubKindSelector, SpecificSelector> {
-    pub base: GenericKindSelector,
-    pub sub: GenericSubKindSelector,
-    pub specific: ValuePattern<SpecificSelector>,
+pub enum PointSegSelector {
+    InclusiveAny,       // +:*  // includes Root if it's the first segment
+    InclusiveRecursive, // +:** // includes Root if its the first segment
+    Any,                // *
+    Recursive,          // **
+    Exact(ExactPointSeg),
+    Version(VersionReq),
 }
 
-impl KindSelector {
-    pub fn new(
-        kind: KindBaseSelector,
-        sub_kind: SubKindSelector,
-        specific: ValuePattern<SpecificSelector>,
-    ) -> Self {
-        Self {
-            base: kind,
-            sub: sub_kind,
-            specific,
-        }
-    }
-
-    pub fn from_base(base: BaseKind) -> Self {
-        Self {
-            base: Pattern::Exact(base),
-            sub: SubKindSelector::Any,
-            specific: ValuePattern::Any,
-        }
-    }
-
-    pub fn matches(&self, kind: &Kind) -> bool
-    where
-        KindParts: Eq + PartialEq,
-    {
-        /*
-        self.base.matches(&kind.to_base())
-            && self.sub.matches(&kind.sub().into())
-            && self.specific.is_match_opt(kind.specific().as_ref()).is_ok()
-
-         */
-
-        // HACKED waiting to be refactored when we actually need to match on subtypes
-        self.base.matches(&kind.to_base())
-    }
-
-    pub fn as_point_segments(&self) -> Result<String, SpaceErr> {
-        match &self.base {
-            KindBaseSelector::Any => Err(SpaceErr::server_error(
-                "cannot turn a base wildcard kind into point segments",
-            )),
-            KindBaseSelector::Exact(e) => Ok(e.to_skewer().to_string()),
+impl PointSegSelector {
+    pub fn is_match(&self, segment: &PointSeg) -> bool {
+        match self {
+            PointSegSelector::InclusiveAny => true,
+            PointSegSelector::InclusiveRecursive => true,
+            PointSegSelector::Any => true,
+            PointSegSelector::Recursive => true,
+            PointSegSelector::Exact(exact) => exact.matches(segment),
+            PointSegSelector::Version(ver) => {
+                if let PointSeg::Version(version) = segment {
+                    ver.matches(version)
+                } else {
+                    false
+                }
+            }
         }
     }
 }
 
-impl FromStr for KindSelector {
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum PointSegSelectorVar {
+    InclusiveAny,       // +:*  // includes Root if it's the first segment
+    InclusiveRecursive, // +:** // includes Root if its the first segment
+    Any,                // *
+    Recursive,          // **
+    Exact(ExactPointSeg),
+    Version(VersionReq),
+    Var(Variable),
+    Working(Trace),
+    Pop(Trace),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum PointSegSelectorCtx {
+    InclusiveAny,       // +:*  // includes Root if it's the first segment
+    InclusiveRecursive, // +:** // includes Root if its the first segment
+    Any,                // *
+    Recursive,          // **
+    Exact(ExactPointSeg),
+    Version(VersionReq),
+    Working(Trace),
+    Pop(Trace),
+}
+
+impl FromStr for PointSegSelector {
     type Err = SpaceErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(result(kind_selector(new_span(s)))?)
+        result(all_consuming(point_segment_selector)(new_span(s)))
     }
 }
 
-impl ToString for KindSelector {
-    fn to_string(&self) -> String {
-        format!(
-            "{}<{}<{}>>",
-            self.base.to_string(),
-            match &self.sub {
-                SubKindSelector::Any => "*".to_string(),
-                SubKindSelector::Exact(sub) => {
-                    sub.as_ref().unwrap().to_string()
+impl PointSegSelector {
+    pub fn is_exact(&self) -> bool {
+        match self {
+            PointSegSelector::Exact(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn matches(&self, segment: &PointSeg) -> bool {
+        match self {
+            PointSegSelector::InclusiveAny => true,
+            PointSegSelector::InclusiveRecursive => true,
+            PointSegSelector::Any => true,
+            PointSegSelector::Recursive => true,
+            PointSegSelector::Exact(exact) => match exact {
+                ExactPointSeg::PointSeg(pattern) => *pattern == *segment,
+                ExactPointSeg::Version(a) => {
+                    if let PointSeg::Version(b) = segment {
+                        *a == *b
+                    } else {
+                        false
+                    }
                 }
             },
-            self.specific.to_string()
-        )
-    }
-}
-
-impl KindSelector {
-    pub fn any() -> Self {
-        Self {
-            base: KindBaseSelector::Any,
-            sub: SubKindSelector::Any,
-            specific: ValuePattern::Any,
-        }
-    }
-}
-
-pub type SubKindSelector = Pattern<Option<CamelCase>>;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct SelectorDef<Hop> {
-    pub hops: Vec<Hop>,
-}
-
-pub type Selector = SelectorDef<Hop>;
-pub type SelectorCtx = SelectorDef<Hop>;
-pub type SelectorVar = SelectorDef<Hop>;
-
-impl ToResolved<Selector> for Selector {
-    fn to_resolved(self, env: &Env) -> Result<Selector, SpaceErr> {
-        Ok(self)
-    }
-}
-
-impl FromStr for Selector {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_, rtn) = all_consuming(point_selector)(new_span(s))?;
-        Ok(rtn)
-    }
-}
-
-impl Selector {
-    fn consume(&self) -> Option<Selector> {
-        if self.hops.is_empty() {
-            Option::None
-        } else {
-            let mut hops = self.hops.clone();
-            hops.remove(0);
-            Option::Some(Selector { hops })
-        }
-    }
-
-    pub fn matches_root(&self) -> bool {
-        if self.hops.is_empty() {
-            true
-        } else if self.hops.len() == 1 {
-            let hop = self.hops.first().unwrap();
-            if PointSegSelector::InclusiveAny == hop.segment_selector
-                || PointSegSelector::InclusiveRecursive == hop.segment_selector
-            {
-                hop.kind_selector.matches(&Kind::Root)
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
-    pub fn is_root(&self) -> bool {
-        self.hops.is_empty()
-    }
-
-    pub fn is_final(&self) -> bool {
-        self.hops.len() == 1
-    }
-
-    pub fn query_root(&self) -> Point {
-        let mut segments = vec![];
-        for hop in &self.hops {
-            if let PointSegSelector::Exact(exact) = &hop.segment_selector {
-                if hop.inclusive {
-                    break;
+            PointSegSelector::Version(req) => {
+                if let PointSeg::Version(b) = segment {
+                    req.matches(b)
+                } else {
+                    false
                 }
-                match exact {
-                    ExactPointSeg::PointSeg(seg) => {
-                        segments.push(seg.clone());
-                    }
-                    ExactPointSeg::Version(version) => {
-                        segments.push(PointSeg::Version(version.clone()));
-                    }
-                }
-            } else {
-                break;
             }
-        }
-
-        Point {
-            route: RouteSeg::This,
-            segments,
         }
     }
 
-    pub fn sub_select_hops(&self) -> Vec<Hop> {
-        let mut hops = self.hops.clone();
-        let query_root_segments = self.query_root().segments.len();
-        for _ in 0..query_root_segments {
-            hops.remove(0);
-        }
-        hops
-    }
-
-    pub fn matches(&self, hierarchy: &PointHierarchy) -> bool
-    where
-        BaseKind: Clone,
-        KindParts: Clone,
-    {
-        if hierarchy.is_root() && self.is_root() {
-            return true;
-        }
-
-        if hierarchy.segments.is_empty() || self.hops.is_empty() {
-            return false;
-        }
-
-        let hop = self.hops.first().expect("hop");
-        let seg = hierarchy.segments.first().expect("segment");
-
-        /*
-                    if hierarchy.segments.len() < self.hops.len() {
-                        // if a hop is 'inclusive' then this will match to true.  We do this for cases like:
-                        // localhost+:**   // Here we want everything under localhost INCLUDING localhost to be matched
-        println!("hop: {}", hop.to_string());
-        println!("seg: {}", seg.to_string());
-                        if hop.inclusive && hop.matches(&seg) {
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }
-
-                     */
-
-        if hierarchy.is_final() && self.is_final() {
-            // this is the final hop & segment if they match, everything matches!
-            hop.matches(seg)
-        } else if hierarchy.is_root() {
-            false
-        } else if self.is_root() {
-            false
-        } else if hierarchy.is_final() {
-            // we still have hops that haven't been matched and we are all out of path... but we have a weird rule
-            // if a hop is 'inclusive' then this will match to true.  We do this for cases like:
-            // localhost+:**   // Here we want everything under localhost INCLUDING localhost to be matched
-            if hop.inclusive && hop.matches(&seg) {
-                true
-            } else {
-                false
-            }
-        }
-        // special logic is applied to recursives **
-        else if hop.segment_selector.is_recursive() && self.hops.len() >= 2 {
-            // a Recursive is similar to an Any in that it will match anything, however,
-            // it is not consumed until the NEXT segment matches...
-            let next_hop = self.hops.get(1).expect("next<Hop>");
-            if next_hop.matches(seg) {
-                // since the next hop after the recursive matches, we consume the recursive and continue hopping
-                // this allows us to make matches like:
-                // space.org:**:users ~ space.org:many:silly:dirs:users
-                self.consume()
-                    .expect("PointSelector")
-                    .matches(&hierarchy.consume().expect("AddressKindPath"))
-            } else {
-                // the NEXT hop does not match, therefore we do NOT consume() the current hop
-                self.matches(&hierarchy.consume().expect("AddressKindPath"))
-            }
-        } else if hop.segment_selector.is_recursive() && hierarchy.is_final() {
-            hop.matches(hierarchy.segments.last().expect("segment"))
-        } else if hop.segment_selector.is_recursive() {
-            hop.matches(hierarchy.segments.last().expect("segment"))
-                && self.matches(&hierarchy.consume().expect("hierarchy"))
-        } else if hop.matches(seg) {
-            // in a normal match situation, we consume the hop and move to the next one
-            self.consume()
-                .expect("AddressTksPattern")
-                .matches(&hierarchy.consume().expect("AddressKindPath"))
-        } else {
-            false
+    pub fn is_recursive(&self) -> bool {
+        match self {
+            PointSegSelector::InclusiveAny => false,
+            PointSegSelector::InclusiveRecursive => true,
+            PointSegSelector::Any => false,
+            PointSegSelector::Recursive => true,
+            PointSegSelector::Exact(_) => false,
+            PointSegSelector::Version(_) => false,
         }
     }
 }
 
-impl ToString for Selector {
+impl ToString for PointSegSelector {
     fn to_string(&self) -> String {
-        let mut rtn = String::new();
-        for (index, hop) in self.hops.iter().enumerate() {
-            rtn.push_str(hop.to_string().as_str());
-            if index < self.hops.len() - 1 {
-                rtn.push_str(":");
-            }
+        match self {
+            PointSegSelector::InclusiveAny => "+:*".to_string(),
+            PointSegSelector::InclusiveRecursive => "+:**".to_string(),
+            PointSegSelector::Any => "*".to_string(),
+            PointSegSelector::Recursive => "**".to_string(),
+            PointSegSelector::Exact(exact) => exact.to_string(),
+            PointSegSelector::Version(version) => version.to_string(),
         }
-        rtn
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct VersionReq {
-    pub version: semver::VersionReq,
-}
-
-impl Deref for VersionReq {
-    type Target = semver::VersionReq;
-
-    fn deref(&self) -> &Self::Target {
-        &self.version
-    }
-}
-
-impl Serialize for VersionReq {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(self.version.to_string().as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for VersionReq {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(VersionReqVisitor)
-    }
-}
-
-struct VersionReqVisitor;
-
-impl<'de> Visitor<'de> for VersionReqVisitor {
-    type Value = VersionReq;
-
-    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-        formatter.write_str("SemVer version requirement")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        match VersionReq::from_str(v) {
-            Ok(version) => Ok(version),
-            Err(error) => {
-                //Err(de::Error::custom(error.to_string() ))
-                Err(de::Error::invalid_type(de::Unexpected::Str(v), &self))
-            }
-        }
-    }
-}
-
-impl ToString for VersionReq {
-    fn to_string(&self) -> String {
-        self.version.to_string()
-    }
-}
-
-impl TryInto<semver::VersionReq> for VersionReq {
-    type Error = SpaceErr;
-
-    fn try_into(self) -> Result<semver::VersionReq, Self::Error> {
-        Ok(self.version)
-    }
-}
-
-impl FromStr for VersionReq {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let version = semver::VersionReq::from_str(s)?;
-        Ok(Self { version })
     }
 }
 
 pub type KeySegment = String;
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
+pub enum ExactPointSeg {
+    PointSeg(PointSeg),
+    Version(Version),
+}
 
+impl ExactPointSeg {
+    pub fn matches(&self, segment: &PointSeg) -> bool {
+        match self {
+            ExactPointSeg::PointSeg(s) => *s == *segment,
+            ExactPointSeg::Version(a) => {
+                if let PointSeg::Version(b) = segment {
+                    *a == *b
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
+impl ToString for ExactPointSeg {
+    fn to_string(&self) -> String {
+        match self {
+            ExactPointSeg::PointSeg(point) => point.to_string(),
+            ExactPointSeg::Version(version) => version.to_string(),
+        }
+    }
+}
 
 /// Provides ability to Select on a Specific.  This means wildcards can be applied when any match will do:
 /// `mechtronhub.io:postgres.org:postgres:*:(9.0.0)` will select ANY variant of postgres version 9.0.0.
@@ -398,17 +191,9 @@ pub type SpecificSelector = SpecificSelectorDef<
     ProviderSelector,
     VendorSelector,
     ProductSelector,
-    VariantSelector,
+    ProductVariantSelector,
     VersionReq,
 >;
-
-impl FromStr for SpecificSelector {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        result(all_consuming(specific_selector)(new_span(s)))
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct SpecificSelectorDef<
@@ -462,11 +247,10 @@ pub mod specific {
     use crate::selector::{Pattern, VersionReq};
 
 
-
     pub type ProviderSelector = Pattern<Domain>;
     pub type VendorSelector = Pattern<Domain>;
     pub type ProductSelector = Pattern<SkewerCase>;
-    pub type VariantSelector = Pattern<SkewerCase>;
+    pub type ProductVariantSelector = Pattern<SkewerCase>;
     pub type VersionPattern = Pattern<VersionReq>;
 }
 
@@ -514,50 +298,6 @@ pub type MapEntryPattern = MapEntryPatternDef<Point>;
 pub struct MapEntryPatternDef<Pnt> {
     pub key: String,
     pub payload: ValuePattern<SubstancePatternDef<Pnt>>,
-}
-
-pub type Hop = HopDef<PointSegSelector, KindSelector>;
-pub type HopCtx = HopDef<PointSegSelectorCtx, KindSelector>;
-pub type HopVar = HopDef<PointSegSelectorVar, KindSelectorVar>;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct HopDef<Segment, KindSelector> {
-    pub inclusive: bool,
-    pub segment_selector: Segment,
-    pub kind_selector: KindSelector,
-}
-
-impl Hop {
-    pub fn matches(&self, point_kind_segment: &PointKindSeg) -> bool {
-        self.segment_selector.matches(&point_kind_segment.segment)
-            && self.kind_selector.matches(&point_kind_segment.kind)
-    }
-}
-
-impl ToString for Hop {
-    fn to_string(&self) -> String {
-        let mut rtn = String::new();
-        rtn.push_str(self.segment_selector.to_string().as_str());
-
-        if let Pattern::Exact(base) = &self.kind_selector.base {
-            rtn.push_str(format!("<{}", base.to_string()).as_str());
-            if let Pattern::Exact(sub) = &self.kind_selector.sub {
-                rtn.push_str(format!("<{}", sub.as_ref().unwrap().to_string()).as_str());
-                if let ValuePattern::Pattern(specific) = &self.kind_selector.specific {
-                    rtn.push_str(format!("<{}", specific.to_string()).as_str());
-                    rtn.push_str(">");
-                }
-                rtn.push_str(">");
-            }
-            rtn.push_str(">");
-        }
-
-        if self.inclusive {
-            rtn.push_str("+");
-        }
-
-        rtn
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -689,8 +429,6 @@ where
     }
 }
 
-pub type KindBaseSelector = Pattern<BaseKind>;
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct PortHierarchy {
     pub topic: Topic,
@@ -721,11 +459,7 @@ impl PointHierarchy {
 }
 
 impl PointHierarchy {
-    pub fn push(&self, segment: PointKindSeg) -> PointHierarchy
-    where
-        KindParts: Clone,
-        BaseKind: Clone,
-    {
+    pub fn push(&self, segment: PointKindSeg) -> PointHierarchy {
         if let PointSeg::Root = segment.segment {
             println!("pushing ROOT");
         }
@@ -796,14 +530,6 @@ impl ToString for PointKindSeg {
     }
 }
 
-impl FromStr for PointHierarchy {
-    type Err = SpaceErr;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(consume_hierarchy(new_span(s))?)
-    }
-}
-
 pub type PayloadBlock = PayloadBlockDef<Point>;
 pub type PayloadBlockCtx = PayloadBlockDef<PointCtx>;
 pub type PayloadBlockVar = PayloadBlockDef<PointVar>;
@@ -839,7 +565,6 @@ pub type PatternBlockCtx = PatternBlockDef<PointCtx>;
 pub type PatternBlockVar = PatternBlockDef<PointVar>;
 pub type PatternBlockDef<Pnt> = ValuePattern<SubstancePatternDef<Pnt>>;
 
-/*
 impl ToResolved<PatternBlock> for PatternBlockCtx {
     fn to_resolved(self, env: &Env) -> Result<PatternBlock, SpaceErr> {
         match self {
@@ -863,8 +588,6 @@ impl ToResolved<PatternBlockCtx> for PatternBlockVar {
         }
     }
 }
-
- */
 
 #[derive(Debug, Clone)]
 pub enum PayloadBlockDef<Pnt> {
@@ -895,17 +618,92 @@ impl ToResolved<PayloadBlock> for PayloadBlockVar {
     }
 }
 
-#[cfg(test)]
-pub mod test {
-    use crate::parse::error::result;
-    use crate::parse::point_selector;
-    use crate::util::log;
+pub type PointSelector = PointDef<RouteSeg, PointSegSelector>;
+pub type PointSelectorCtx = PointSelectorDef<PointSegCtx>;
+pub type PointSelectorVar = PointSelectorDef<PointSegVar>;
 
-    #[test]
-    pub fn test_selector() {
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct PointSelectorDef<Seg> {
+    pub route: RouteSeg,
+    pub segments: Vec<Seg>,
+}
+
+impl ToResolved<PointSelector> for PointSelectorCtx {
+    fn to_resolved(self, env: &Env) -> Result<PointSelector, SpaceErr> {
+        todo!()
     }
 }
 
+impl ToResolved<PointSelectorCtx> for PointSelectorVar {
+    fn to_resolved(self, env: &Env) -> Result<PointSelectorCtx, SpaceErr> {
+        todo!()
+    }
+}
 
+impl PointSelector {
+    pub fn is_match(&self, point: &Point) -> bool {
+        if point.route != self.route {
+            return false;
+        }
 
+        if point.segments.len() < self.segments.len() {
+            return false;
+        }
 
+        if !point.segments.is_empty() {
+            let mut index = 0usize;
+            for seg in 0usize..point.segments.len() {
+                if index >= self.segments.len() {
+println!("OUT OF SELECTRORS");
+                    return false;
+                }
+
+                let segment: &PointSeg = point.segments.get(seg.clone()).unwrap();
+                let selector: &PointSegSelector = self.segments.get(index.clone()).unwrap();
+
+                if !selector.is_match(segment) {
+                    return false;
+                }
+
+                if selector.is_recursive()
+                    && (index.clone() + 1 < self.segments.len())
+                    && (seg.clone() + 1usize) < point.segments.len()
+                {
+                    let next_segment: &PointSeg = point.segments.get(seg + 1).unwrap();
+                    let next_selector: &PointSegSelector =
+                        self.segments.get(index.clone() + 1).unwrap();
+                    if next_selector.is_match(next_segment) {
+                        index = index + 1usize;
+                    }
+                } else if selector.is_recursive() {
+                    // do nothing
+                } else {
+                    index = index + 1usize;
+                }
+            }
+        }
+        true
+    }
+}
+
+impl<Seg> FromStr for PointSelectorDef<Seg> {
+    type Err = SpaceErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct SelectorDef<Hop> {
+    phantom: PhantomData<Hop>,
+}
+
+#[cfg(test)]
+pub mod test {
+
+    #[test]
+    pub fn test_point_selector() {
+
+    }
+}
