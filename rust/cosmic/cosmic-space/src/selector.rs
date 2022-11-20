@@ -1040,3 +1040,19 @@ impl ToResolved<PayloadBlock> for PayloadBlockVar {
         block.to_resolved(env)
     }
 }
+
+#[cfg(test)]
+pub mod test {
+    use crate::parse::error::result;
+    use crate::parse::point_selector;
+    use crate::util::log;
+
+    #[test]
+    pub fn test_selector() {
+        let selector = log(result(point_selector("*"))).unwrap();
+    }
+}
+
+
+
+
