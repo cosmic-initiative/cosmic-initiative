@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-nom"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 edition = "2021"
 
 authors = ["Scott Williams <scott@starlane.io>"]

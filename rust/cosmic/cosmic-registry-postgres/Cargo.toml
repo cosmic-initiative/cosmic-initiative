@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-registry-postgres"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 edition = "2021"
 
 authors = ["Scott Williams <scott@starlane.io>"]
@@ -15,9 +15,9 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cosmic-space={ path= "../cosmic-space" ,version = "0.4.0-alpha1"}
-cosmic-hyperspace={ path= "../cosmic-hyperspace" ,version = "0.4.0-alpha1"}
-mechtron-host={ path= "../../mechtron/mechtron-host",version = "0.4.0-alpha1"}
+cosmic-space={ path= "../cosmic-space" ,version = "0.5.0-alpha1"}
+cosmic-hyperspace={ path= "../cosmic-hyperspace" ,version = "0.5.0-alpha1"}
+mechtron-host={ path= "../../mechtron/mechtron-host",version = "0.5.0-alpha1"}
 
 sqlx = { version = "0.5.11", features = [ "runtime-tokio-rustls", "postgres", "macros", "any" ] }
 serde = { version="1.0.69", features=['derive','rc'] }

@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-cli"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 edition = "2021"
 
 authors = ["Scott Williams <scott@starlane.io>"]
@@ -15,11 +15,11 @@ path = "src/main.rs"
 
 [dependencies]
 
-cosmic-hyperlane={ path="../cosmic-hyperlane",version = "0.4.0-alpha1"}
-cosmic-hyperlane-tcp={ path="../cosmic-hyperlane-tcp",version = "0.4.0-alpha1"}
-cosmic-space= { path= "../cosmic-space" ,version = "0.4.0-alpha1"}
-cosmic-hyperspace= { path= "../cosmic-hyperspace" ,version = "0.4.0-alpha1"}
-cosmic-nom= { path="../cosmic-nom",version = "0.4.0-alpha1"}
+cosmic-hyperlane={ path="../cosmic-hyperlane",version = "0.5.0-alpha1"}
+cosmic-hyperlane-tcp={ path="../cosmic-hyperlane-tcp",version = "0.5.0-alpha1"}
+cosmic-space= { path= "../cosmic-space" ,version = "0.5.0-alpha1"}
+cosmic-hyperspace= { path= "../cosmic-hyperspace" ,version = "0.5.0-alpha1"}
+cosmic-nom= { path="../cosmic-nom",version = "0.5.0-alpha1"}
 text_io = "0.1.12"
 clap = { version="3.2.22", features=["cargo"] }
 tokio = { version = "1.15.0", features = ["rt"] }

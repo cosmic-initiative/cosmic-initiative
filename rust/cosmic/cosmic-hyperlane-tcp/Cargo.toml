@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-hyperlane-tcp"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 edition = "2021"
 
 authors = ["Scott Williams <scott@starlane.io>"]
@@ -11,8 +11,8 @@ license = "MIT"
 
 [dependencies]
 async-trait = "0.1.48"
-cosmic-hyperlane= { path= "../cosmic-hyperlane" ,version = "0.4.0-alpha1"}
-cosmic-space = { path= "../cosmic-space",version = "0.4.0-alpha1"}
+cosmic-hyperlane= { path= "../cosmic-hyperlane" ,version = "0.5.0-alpha1"}
+cosmic-space = { path= "../cosmic-space",version = "0.5.0-alpha1"}
 tokio-rustls = "0.23"
 tokio = { version = "1.20.1", features = ["full"] }
 rcgen = "0.9.3"

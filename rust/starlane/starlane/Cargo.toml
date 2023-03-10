@@ -1,6 +1,6 @@
 [package]
 name = "starlane"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 
 
 
@@ -22,12 +22,12 @@ none=[]
 keycloak=[]
 
 [dependencies]
-cosmic-space={ path= "../../cosmic/cosmic-space" ,version = "0.4.0-alpha1"}
-cosmic-hyperspace={ path= "../../cosmic/cosmic-hyperspace" ,version = "0.4.0-alpha1"}
-cosmic-registry-postgres={ path= "../../cosmic/cosmic-registry-postgres" ,version = "0.4.0-alpha1", optional=true}
-cosmic-hyperlane={ path="../../cosmic/cosmic-hyperlane",version = "0.4.0-alpha1"}
-cosmic-hyperlane-tcp={ path="../../cosmic/cosmic-hyperlane-tcp",version = "0.4.0-alpha1"}
-mechtron-host={ path="../../mechtron/mechtron-host",version = "0.4.0-alpha1"}
+cosmic-space={ path= "../../cosmic/cosmic-space" ,version = "0.5.0-alpha1"}
+cosmic-hyperspace={ path= "../../cosmic/cosmic-hyperspace" ,version = "0.5.0-alpha1"}
+cosmic-registry-postgres={ path= "../../cosmic/cosmic-registry-postgres" ,version = "0.5.0-alpha1", optional=true}
+cosmic-hyperlane={ path="../../cosmic/cosmic-hyperlane",version = "0.5.0-alpha1"}
+cosmic-hyperlane-tcp={ path="../../cosmic/cosmic-hyperlane-tcp",version = "0.5.0-alpha1"}
+mechtron-host={ path="../../mechtron/mechtron-host",version = "0.5.0-alpha1"}
 lazy_static = "1.4.0"
 uuid = { version="1.1.2", features=["v4"] }
 chrono = { version="0.4.19", features=["serde"] }

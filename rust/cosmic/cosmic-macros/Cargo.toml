@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-macros"
-version = "0.4.0-alpha1"
+version = "0.5.0-alpha1"
 edition = "2021"
 
 authors = ["Scott Williams <scott@starlane.io>"]
@@ -17,7 +17,7 @@ doctest = false
 
 [dependencies]
 
-cosmic-space = { path= "../cosmic-space", default-features=false,version = "0.4.0-alpha1"}
+cosmic-space = { path= "../cosmic-space", default-features=false,version = "0.5.0-alpha1"}
 lazy_static = "1.4.0"
 syn = { version = "1.0", features = ["full"] }
 quote = "1.0"
