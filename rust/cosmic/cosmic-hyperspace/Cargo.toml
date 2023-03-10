@@ -17,6 +17,7 @@ cosmic-macros = { path="../cosmic-macros",version = "0.5.0-alpha1"}
 cosmic-space = { path= "../cosmic-space",version = "0.5.0-alpha1"}
 cosmic-nom = { path="../cosmic-nom",version = "0.5.0-alpha1"}
 cosmic-hyperlane = { path= "../cosmic-hyperlane" ,version = "0.5.0-alpha1"}
+cosmic-config= { path="../cosmic-config" ,version = "0.5.0-alpha1"}
 mechtron-host = { path="../../mechtron/mechtron-host" ,version = "0.5.0-alpha1"}
 threadpool = "1.8.1"
 acid-store = { version = "0.12.0", features=['store-directory','repo-value'] }

@@ -1,5 +1,6 @@
 version:
 	$(MAKE) -C cosmic-nom version
+	$(MAKE) -C cosmic-config version
 	$(MAKE) -C cosmic-macros-primitive version
 	$(MAKE) -C cosmic-space version
 	$(MAKE) -C cosmic-macros version
@@ -13,6 +14,7 @@ version:
 
 publish-dry-run:
 	$(MAKE) -C cosmic-nom publish-dry-run
+	$(MAKE) -C cosmic-config publish-dry-run
 	$(MAKE) -C cosmic-macros-primitive publish-dry-run
 	$(MAKE) -C cosmic-space publish-dry-run
 	$(MAKE) -C cosmic-macros publish-dry-run
@@ -25,6 +27,7 @@ publish-dry-run:
 
 publish:
 	$(MAKE) -C cosmic-nom publish
+	$(MAKE) -C cosmic-config publish
 	$(MAKE) -C cosmic-macros-primitive publish
 	sleep 30 
 	$(MAKE) -C cosmic-space publish

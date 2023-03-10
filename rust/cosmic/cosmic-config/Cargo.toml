@@ -1,0 +1,10 @@
+[package]
+name = "cosmic-config"
+version = "0.5.0-alpha1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cosmic-nom = { path="../cosmic-nom" ,version = "0.5.0-alpha1"}
+

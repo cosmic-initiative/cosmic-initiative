@@ -17,6 +17,7 @@ doctest = false
 
 [dependencies]
 cosmic-nom = { path="../cosmic-nom" ,version = "0.5.0-alpha1"}
+cosmic-config= { path="../cosmic-config" ,version = "0.5.0-alpha1"}
 cosmic-macros-primitive = { path="../cosmic-macros-primitive" ,version = "0.5.0-alpha1"}
 ariadne = "0.1.5"
 async-trait = "0.1.48"
