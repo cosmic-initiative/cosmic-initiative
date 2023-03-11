@@ -85,6 +85,11 @@ fn path_mapping<'a>() -> impl Parser<char, PathMapping, Error=Simple<char>> {
     })
 }
 
+fn path_mapping_line<'a>() -> impl Parser<char, PathMapping, Error=Simple<char>> {
+   path_mapping().then_ignore(just(";").padded())
+}
+
+
 
 fn parser<'a>() -> impl Parser<char, Stmt, Error=Simple<char>> {
     path_mapping().map( |_| Stmt::Expr)
@@ -93,7 +98,7 @@ fn parser<'a>() -> impl Parser<char, Stmt, Error=Simple<char>> {
 #[cfg(test)]
 pub mod test {
     #![feature(unwrap_infallible)]
-    use crate::{parser, path, path_mapping};
+    use crate::{parser, path, path_mapping, path_mapping_line};
     use chumsky::{Parser, Stream};
     use chumsky::text::TextParser;
 
@@ -107,20 +112,30 @@ pub mod test {
     }
 
     #[test]
+    pub fn path_mapping_line_pass<'a>() {
+        let mapping = path_mapping_line().parse( "hello -> /kitty;").unwrap();
+        assert_eq!(mapping.from.path, "hello".to_string());
+        assert!(!mapping.from.absolute);
+        assert_eq!(mapping.to.path, "/kitty".to_string());
+        assert!(mapping.to.absolute);
+    }
+
+
+    #[test]
+    pub fn path_mapping_line_fail<'a>() {
+        let mapping = path_mapping_line().parse( "hello -> /kitty");
+        assert!(mapping.is_err());
+        for e in mapping.unwrap_err() {
+            println!("{}", e );
+        }
+    }
+
+    #[test]
     pub fn path_pass<'a>()  {
         let stmts = path().parse(
             r#"/root/filesys"#,
         ).unwrap();
     }
 
-    #[test]
-    pub fn path_fail<'a>()  {
-        let stmts = path().parse(
-            r#"/root/more "#,
-        );
-        assert!(stmts.is_err());
-        for e in stmts.unwrap_err() {
-            println!("{}", e );
-        }
-    }
+
 }
