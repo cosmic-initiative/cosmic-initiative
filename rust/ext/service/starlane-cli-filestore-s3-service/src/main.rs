@@ -1,20 +1,16 @@
 use clap::Parser;
 use starlane::dialect::cli::filestore::Cli;
 use starlane::dialect::cli::filestore::Commands;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::{absolute, PathBuf, StripPrefixError};
-use std::{env, fs, io};
 use std::env::VarError;
+use std::io::{Read, Write};
+use std::path::StripPrefixError;
 use std::process::{ExitCode, Termination};
+use std::io;
 use thiserror::Error;
 
 
 pub const FILE_STORE_ROOT: &'static str = "FILE_STORE_ROOT";
 
-pub fn root_dir() -> Result<PathBuf,Error> {
-    Ok(absolute(env::var(FILE_STORE_ROOT)?)?)
-}
 
 
 fn main() -> ExitCode{
@@ -33,8 +29,7 @@ fn run() -> Result<(),Error> {
 
     let cli = Cli::parse();
     if let Commands::Init = cli.command {
-        ensure_dir(&root_dir()?);
-        return Ok(());
+        todo!()
     }
 
 
@@ -71,38 +66,6 @@ fn run() -> Result<(),Error> {
     }
 }
 
-fn norm(orig: &PathBuf ) -> Result<PathBuf,Error> {
-    let path: PathBuf = match orig.starts_with("/") {
-        true => orig.strip_prefix("/")?.into(),
-        false => orig.clone()
-    };
-    let root_dir = root_dir()?;
-//    let normed= canonicalize(absolute(root_dir.join(path))?)?;
-    let normed : PathBuf = root_dir.join(path).into();
-    let parent = normed.parent().unwrap().canonicalize()?;
-
-    if let Option::Some(root) = root_dir.parent() {
-        if parent == root {
-            return Err(Error::String(format!("illegal path '{}' escapes filesystem boundaries", orig.display())));
-        }
-    }
-
-    if !parent.starts_with(&root_dir){
-        return Err(Error::String(format!("illegal path '{}' escapes filesystem boundaries", orig.display())));
-    }
-
-    Ok(normed)
-}
-
-
-fn ensure_dir(dir: &PathBuf ) -> Result<(),Error> {
-   if dir.exists() && dir.is_dir(){
-        Ok(())
-    } else {
-       fs::create_dir_all(dir)?;
-       Ok(())
-    }
-}
 
 
 #[derive(Error, Debug)]
@@ -130,21 +93,6 @@ impl From<&str> for Error {
         Self::String(value.to_string())
     }
 }
-
-/*
-pub fn join( path: PathBuf, ext: PathBuf) -> Result<PathBuf, Error>{
-
-    let ext : PathBuf = match ext.starts_with("/") {
-        true => ext.strip_prefix("/")?.into(),
-        false => ext
-    };
-    let joined = path.join(ext);
-
-    println!("JOINED {}", joined.display());
-    Ok(joined)
-}
-
- */
 
 
 
