@@ -290,9 +290,9 @@ where
 }
 
 impl<T> ValuePattern<T> {
-    pub fn modify<X, F>(self, mut f: F) -> Result<ValuePattern<X>, SpaceErr>
+    pub fn modify<X, F>(self, mut f: F) -> anyhow::Result<ValuePattern<X>>
     where
-        F: FnMut(T) -> Result<X, SpaceErr>,
+        F: FnMut(T) -> anyhow::Result<X>,
     {
         Ok(match self {
             ValuePattern::Always => ValuePattern::Always,
@@ -400,14 +400,14 @@ impl ValueMatcher<String> for StringMatcher {
 }
 
 pub trait Convert<A> {
-    fn convert(self) -> Result<A, SpaceErr>;
+    fn convert(self) -> anyhow::Result<A>;
 }
 
 pub trait ConvertFrom<A>
 where
     Self: Sized,
 {
-    fn convert_from(a: A) -> Result<Self, SpaceErr>;
+    fn convert_from(a: A) -> anyhow::Result<Self>;
 }
 
 pub fn uuid() -> Uuid {
@@ -422,14 +422,14 @@ pub trait ToResolved<R>
 where
     Self: Sized,
 {
-    fn collapse(self) -> Result<R, SpaceErr> {
+    fn collapse(self) -> anyhow::Result<R> {
         self.to_resolved(&Env::no_point())
     }
 
-    fn to_resolved(self, env: &Env) -> Result<R, SpaceErr>;
+    fn to_resolved(self, env: &Env) -> anyhow::Result<R>;
 }
 
-pub fn log<R>(result: Result<R, SpaceErr>) -> Result<R, SpaceErr> {
+pub fn log<R>(result: anyhow::anyhow::Result<R>) -> Result<R> {
     match result {
         Ok(r) => Ok(r),
         Err(err) => {

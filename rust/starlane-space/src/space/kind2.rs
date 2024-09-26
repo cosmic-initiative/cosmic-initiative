@@ -85,7 +85,7 @@ pub enum Variant {
 }
 
 impl Variant {
-    pub fn from(kind: &Kind, variant: &CamelCase) -> Result<Self, SpaceErr> {
+    pub fn from(kind: &Kind, variant: &CamelCase) -> anyhow::Result<Self> {
         match kind {
             what => Err(format!(
                 "kind '{}' does not have a variant '{}' ",

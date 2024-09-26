@@ -240,7 +240,7 @@ pub struct PointKindDef<Pnt> {
 }
 
 impl ToResolved<PointKindCtx> for PointKindVar {
-    fn to_resolved(self, env: &Env) -> Result<PointKindCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKindCtx> {
         Ok(PointKindCtx {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -249,7 +249,7 @@ impl ToResolved<PointKindCtx> for PointKindVar {
 }
 
 impl ToResolved<PointKind> for PointKindVar {
-    fn to_resolved(self, env: &Env) -> Result<PointKind, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKind> {
         Ok(PointKind {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -258,7 +258,7 @@ impl ToResolved<PointKind> for PointKindVar {
 }
 
 impl ToResolved<PointKind> for PointKindCtx {
-    fn to_resolved(self, env: &Env) -> Result<PointKind, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKind> {
         Ok(PointKind {
             point: self.point.to_resolved(env)?,
             kind: self.kind,

@@ -77,7 +77,7 @@ impl KindSelector {
         self.base.matches(&kind.to_base())
     }
 
-    pub fn as_point_segments(&self) -> Result<String, SpaceErr> {
+    pub fn as_point_segments(&self) -> anyhow::Result<String> {
         match &self.base {
             KindBaseSelector::Any => Err(err(
                 "cannot turn a base wildcard kind into point segments",
@@ -133,7 +133,7 @@ pub type SelectorCtx = SelectorDef<Hop>;
 pub type SelectorVar = SelectorDef<Hop>;
 
 impl ToResolved<Selector> for Selector {
-    fn to_resolved(self, env: &Env) -> Result<Selector, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Selector> {
         Ok(self)
     }
 }
@@ -763,7 +763,7 @@ where
         }
     }
 
-    pub fn convert<To>(self) -> Result<Pattern<To>, SpaceErr>
+    pub fn convert<To>(self) -> anyhow::Result<Pattern<To>>
     where
         P: TryInto<To, Error = SpaceErr> + Eq + PartialEq,
     {
@@ -815,7 +815,7 @@ where
         }
     }
 
-    pub fn convert<To>(self) -> Result<EmptyPattern<To>, SpaceErr>
+    pub fn convert<To>(self) -> anyhow::Result<EmptyPattern<To>>
     where
         P: TryInto<To, Error = SpaceErr> + Eq + PartialEq,
     {
@@ -967,7 +967,7 @@ pub type PayloadBlockCtx = PayloadBlockDef<PointCtx>;
 pub type PayloadBlockVar = PayloadBlockDef<PointVar>;
 
 impl ToResolved<PayloadBlockCtx> for PayloadBlockVar {
-    fn to_resolved(self, env: &Env) -> Result<PayloadBlockCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PayloadBlockCtx> {
         match self {
             PayloadBlockVar::DirectPattern(block) => Ok(PayloadBlockCtx::DirectPattern(
                 block.modify(move |block| {
@@ -998,7 +998,7 @@ pub type PatternBlockVar = PatternBlockDef<PointVar>;
 pub type PatternBlockDef<Pnt> = ValuePattern<SubstancePatternDef<Pnt>>;
 
 impl ToResolved<PatternBlock> for PatternBlockCtx {
-    fn to_resolved(self, env: &Env) -> Result<PatternBlock, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PatternBlock> {
         match self {
             PatternBlockCtx::Always => Ok(PatternBlock::Always),
             PatternBlockCtx::Never => Ok(PatternBlock::Never),
@@ -1010,7 +1010,7 @@ impl ToResolved<PatternBlock> for PatternBlockCtx {
 }
 
 impl ToResolved<PatternBlockCtx> for PatternBlockVar {
-    fn to_resolved(self, env: &Env) -> Result<PatternBlockCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PatternBlockCtx> {
         match self {
             PatternBlockVar::Always => Ok(PatternBlockCtx::Always),
             PatternBlockVar::Never => Ok(PatternBlockCtx::Never),
@@ -1028,7 +1028,7 @@ pub enum PayloadBlockDef<Pnt> {
 }
 
 impl ToResolved<PayloadBlock> for PayloadBlockCtx {
-    fn to_resolved(self, env: &Env) -> Result<PayloadBlock, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PayloadBlock> {
         match self {
             PayloadBlockCtx::DirectPattern(block) => {
                 Ok(PayloadBlock::DirectPattern(block.modify(move |block| {
@@ -1044,7 +1044,7 @@ impl ToResolved<PayloadBlock> for PayloadBlockCtx {
 }
 
 impl ToResolved<PayloadBlock> for PayloadBlockVar {
-    fn to_resolved(self, env: &Env) -> Result<PayloadBlock, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PayloadBlock> {
         let block: PayloadBlockCtx = self.to_resolved(env)?;
         block.to_resolved(env)
     }

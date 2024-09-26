@@ -132,8 +132,8 @@ impl Substance {
 }
 
 pub trait ToSubstance<S> {
-    fn to_substance(self) -> Result<S, SpaceErr>;
-    fn to_substance_ref(&self) -> Result<&S, SpaceErr>;
+    fn to_substance(self) -> anyhow::Result<S>;
+    fn to_substance_ref(&self) -> anyhow::Result<&S>;
 }
 
 pub trait ChildSubstance {}
@@ -197,7 +197,7 @@ impl Default for Substance {
 }
 
 impl Substance {
-    pub fn to_text(self) -> Result<String, SpaceErr> {
+    pub fn to_text(self) -> anyhow::Result<String> {
         if let Substance::Text(text) = self {
             Ok(text)
         } else {
@@ -213,7 +213,7 @@ impl Substance {
         }
     }
 
-    pub fn from_bin(bin: Bin) -> Result<Self, SpaceErr> {
+    pub fn from_bin(bin: Bin) -> anyhow::Result<Self> {
         Ok(bincode::deserialize(bin.as_slice())?)
     }
 
@@ -255,7 +255,7 @@ impl Substance {
         }
     }
 
-    pub fn to_bin(&self) -> Result<Bin, SpaceErr> {
+    pub fn to_bin(&self) -> anyhow::Result<Bin> {
         Ok(bincode::serialize(&self)?)
         /*        match self {
                    Substance::Empty => Ok(vec![]),
@@ -336,7 +336,7 @@ impl SubstanceMap {
     }
 
      */
-    pub fn to_bin(self) -> Result<Bin, SpaceErr> {
+    pub fn to_bin(self) -> anyhow::Result<Bin> {
         Ok(bincode::serialize(&self)?)
     }
 
@@ -417,7 +417,7 @@ impl SubstanceList {
     pub fn new() -> Self {
         Self { list: vec![] }
     }
-    pub fn to_bin(self) -> Result<Bin, SpaceErr> {
+    pub fn to_bin(self) -> anyhow::Result<Bin> {
         Ok(bincode::serialize(&self)?)
     }
 }
@@ -443,7 +443,7 @@ pub struct ListPattern {
 }
 
 impl ListPattern {
-    pub fn is_match(&self, list: &SubstanceList) -> Result<(), SpaceErr> {
+    pub fn is_match(&self, list: &SubstanceList) -> anyhow::Result<()> {
         /*
         for i in &list.list {
             if self.primitive != i.primitive_type() {
@@ -482,7 +482,7 @@ pub enum SubstanceTypePatternDef<Pnt> {
 }
 
 impl ToResolved<SubstanceTypePatternDef<Point>> for SubstanceTypePatternDef<PointCtx> {
-    fn to_resolved(self, env: &Env) -> Result<SubstanceTypePatternDef<Point>, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstanceTypePatternDef<Point>> {
         match self {
             SubstanceTypePatternDef::Empty => Ok(SubstanceTypePatternDef::Empty),
             SubstanceTypePatternDef::Primitive(payload_type) => {
@@ -497,7 +497,7 @@ impl ToResolved<SubstanceTypePatternDef<Point>> for SubstanceTypePatternDef<Poin
 }
 
 impl ToResolved<SubstanceTypePatternCtx> for SubstanceTypePatternVar {
-    fn to_resolved(self, env: &Env) -> Result<SubstanceTypePatternCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstanceTypePatternCtx> {
         match self {
             SubstanceTypePatternVar::Empty => Ok(SubstanceTypePatternCtx::Empty),
             SubstanceTypePatternVar::Primitive(payload_type) => {
@@ -589,7 +589,7 @@ pub struct SubstancePatternDef<Pnt> {
 }
 
 impl ToResolved<SubstancePatternCtx> for SubstancePatternVar {
-    fn to_resolved(self, env: &Env) -> Result<SubstancePatternCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstancePatternCtx> {
         let mut errs = vec![];
         let structure = match self.structure.to_resolved(env) {
             Ok(structure) => Some(structure),
@@ -622,7 +622,7 @@ impl ToResolved<SubstancePatternCtx> for SubstancePatternVar {
 }
 
 impl ToResolved<SubstancePattern> for SubstancePatternCtx {
-    fn to_resolved(self, resolver: &Env) -> Result<SubstancePattern, SpaceErr> {
+    fn to_resolved(self, resolver: &Env) -> anyhow::Result<SubstancePattern> {
         let mut errs = vec![];
         let structure = match self.structure.to_resolved(resolver) {
             Ok(structure) => Some(structure),
@@ -674,7 +674,7 @@ pub type CallWithConfigCtx = CallWithConfigDef<PointCtx>;
 pub type CallWithConfigVar = CallWithConfigDef<PointVar>;
 
 impl ToResolved<CallWithConfigCtx> for CallWithConfigVar {
-    fn to_resolved(self, resolver: &Env) -> Result<CallWithConfigCtx, SpaceErr> {
+    fn to_resolved(self, resolver: &Env) -> anyhow::Result<CallWithConfigCtx> {
         let mut errs = vec![];
         let call = match self.call.to_resolved(resolver) {
             Ok(call) => Some(call),
@@ -706,7 +706,7 @@ impl ToResolved<CallWithConfigCtx> for CallWithConfigVar {
 }
 
 impl ToResolved<CallWithConfig> for CallWithConfigCtx {
-    fn to_resolved(self, resolver: &Env) -> Result<CallWithConfig, SpaceErr> {
+    fn to_resolved(self, resolver: &Env) -> anyhow::Result<CallWithConfig> {
         let mut errs = vec![];
         let call = match self.call.to_resolved(resolver) {
             Ok(call) => Some(call),
@@ -742,7 +742,7 @@ pub type CallCtx = CallDef<PointCtx>;
 pub type CallVar = CallDef<PointVar>;
 
 impl ToResolved<Call> for CallCtx {
-    fn to_resolved(self, env: &Env) -> Result<Call, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Call> {
         Ok(Call {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -751,7 +751,7 @@ impl ToResolved<Call> for CallCtx {
 }
 
 impl ToResolved<CallCtx> for CallVar {
-    fn to_resolved(self, env: &Env) -> Result<CallCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<CallCtx> {
         Ok(CallCtx {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -760,7 +760,7 @@ impl ToResolved<CallCtx> for CallVar {
 }
 
 impl ToResolved<Call> for CallVar {
-    fn to_resolved(self, env: &Env) -> Result<Call, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Call> {
         let call: CallCtx = self.to_resolved(env)?;
         call.to_resolved(env)
     }
@@ -1091,7 +1091,7 @@ impl DerefMut for MultipartFormBuilder {
 }
 
 impl MultipartFormBuilder {
-    pub fn build(self) -> Result<MultipartForm, SpaceErr> {
+    pub fn build(self) -> anyhow::Result<MultipartForm> {
         let data = serde_urlencoded::to_string(&self.map)?;
         Ok(MultipartForm { data })
     }

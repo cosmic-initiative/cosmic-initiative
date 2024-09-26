@@ -66,7 +66,7 @@ impl Access {
         }
     }
 
-    pub fn check_privilege(&self, privilege: &str) -> Result<(), SpaceErr> {
+    pub fn check_privilege(&self, privilege: &str) -> anyhow::Result<()> {
         match self {
             Access::Super => Ok(()),
             Access::Owner => Ok(()),
@@ -584,13 +584,13 @@ impl Into<AccessGrant> for IndexedAccessGrant {
 }
 
 pub trait AccessProvider: Send + Sync {
-    fn access(&self, to: &Agent, on: &Point) -> Result<Access, SpaceErr>;
+    fn access(&self, to: &Agent, on: &Point) -> anyhow::Result<Access>;
 }
 
 pub struct AllAccessProvider();
 
 impl AccessProvider for AllAccessProvider {
-    fn access(&self, _: &Agent, _: &Point) -> Result<Access, SpaceErr> {
+    fn access(&self, _: &Agent, _: &Point) -> anyhow::Result<Access> {
         Ok(Access::SuperOwner)
     }
 }

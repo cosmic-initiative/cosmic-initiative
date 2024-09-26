@@ -22,7 +22,7 @@ impl Path {
         }
     }
 
-    pub fn make_absolute(string: &str) -> Result<Self, SpaceErr> {
+    pub fn make_absolute(string: &str) -> anyhow::Result<Self> {
         if string.starts_with("/") {
             Path::from_str(string)
         } else {
@@ -30,7 +30,7 @@ impl Path {
         }
     }
 
-    pub fn bin(&self) -> Result<Vec<u8>, SpaceErr> {
+    pub fn bin(&self) -> anyhow::Result<Vec<u8>> {
         let bin = bincode::serialize(self)?;
         Ok(bin)
     }
@@ -39,7 +39,7 @@ impl Path {
         self.string.starts_with("/")
     }
 
-    pub fn cat(&self, path: &Path) -> Result<Self, SpaceErr> {
+    pub fn cat(&self, path: &Path) -> anyhow::Result<Self> {
         if self.string.ends_with("/") {
             Path::from_str(format!("{}{}", self.string.as_str(), path.string.as_str()).as_str())
         } else {

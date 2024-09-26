@@ -610,7 +610,7 @@ impl PointLogger {
         }
     }
 
-    pub fn push_point<S: ToString>(&self, segs: S) -> Result<PointLogger, SpaceErr> {
+    pub fn push_point<S: ToString>(&self, segs: S) -> anyhow::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.push(segs)?,
@@ -628,7 +628,7 @@ impl PointLogger {
         }
     }
 
-    pub fn push_mark<S: ToString>(&self, segs: S) -> Result<PointLogger, SpaceErr> {
+    pub fn push_mark<S: ToString>(&self, segs: S) -> anyhow::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.clone(),
@@ -637,7 +637,7 @@ impl PointLogger {
         })
     }
 
-    pub fn push_action<A: ToString>(&self, action: A) -> Result<PointLogger, SpaceErr> {
+    pub fn push_action<A: ToString>(&self, action: A) -> anyhow::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.clone(),
@@ -1176,7 +1176,7 @@ pub struct TrackDef<R> {
 }
 
 impl TrackRegex {
-    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> Result<Self, SpaceErr> {
+    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> anyhow::Result<Self> {
         let selector = Selector::from_str(selector.to_string().as_str())?;
         let stop = Regex::from_str(stop.to_string().as_str())?;
         let action = Regex::from_str(action.to_string().as_str())?;
@@ -1190,7 +1190,7 @@ impl TrackRegex {
 }
 
 impl TrackDef<String> {
-    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> Result<Self, SpaceErr> {
+    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> anyhow::Result<Self> {
         let selector = Selector::from_str(selector.to_string().as_str())?;
         Regex::from_str(stop.to_string().as_str())?;
         Regex::from_str(action.to_string().as_str())?;
@@ -1205,7 +1205,7 @@ impl TrackDef<String> {
         })
     }
 
-    pub fn to_regex(&self) -> Result<TrackRegex, SpaceErr> {
+    pub fn to_regex(&self) -> anyhow::Result<TrackRegex> {
         Ok(TrackRegex {
             selector: self.selector.clone(),
             stop: Regex::from_str(self.stop.as_str())?,

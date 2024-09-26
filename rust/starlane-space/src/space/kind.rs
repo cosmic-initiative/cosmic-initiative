@@ -1,5 +1,5 @@
 use core::str::FromStr;
-
+use anyhow::anyhow;
 use convert_case::{Case, Casing};
 use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
@@ -373,32 +373,32 @@ impl TryFrom<KindParts> for Kind {
     fn try_from(value: KindParts) -> Result<Self, Self::Error> {
         Ok(match value.base {
             BaseKind::Database => {
-                match value.sub.ok_or("Database<?> requires a Sub Kind")?.as_str() {
+                match value.sub.ok_or(anyhow!("Database<?> requires a Sub Kind"))?.as_str() {
                     "Relational" => Kind::Database(DatabaseSubKind::Relational(
                         value
                             .specific
-                            .ok_or("Database<Relational<?>> requires a Specific")?,
+                            .ok_or(anyhow!("Database<Relational<?>> requires a Specific"))?,
                     )),
                     what => {
-                        return Err(SpaceErr::from(format!(
+                        return Err(anyhow!(
                             "unexpected Database SubKind '{}'",
                             what
-                        )));
+                        ));
                     }
                 }
             }
             BaseKind::UserBase => {
-                match value.sub.ok_or("UserBase<?> requires a Sub Kind")?.as_str() {
+                match value.sub.ok_or(anyhow!("UserBase<?> requires a Sub Kind"))?.as_str() {
                     "OAuth" => Kind::UserBase(UserBaseSubKind::OAuth(
                         value
                             .specific
-                            .ok_or("UserBase<OAuth<?>> requires a Specific")?,
+                            .ok_or(anyhow!("UserBase<OAuth<?>> requires a Specific"))?,
                     )),
                     what => {
-                        return Err(SpaceErr::from(format!(
+                        return Err(anyhow!(
                             "unexpected Database SubKind '{}'",
                             what
-                        )));
+                        ));
                     }
                 }
             }
@@ -780,7 +780,7 @@ pub mod test {
     use core::str::FromStr;
 
     #[test]
-    pub fn selector() -> Result<(), SpaceErr> {
+    pub fn selector() -> anyhow::Result<()> {
         let kind = Kind::Star(StarSub::Fold);
         let selector = KindSelector::from_str("<Star<Fold>>")?;
         assert!(selector.matches(&kind));

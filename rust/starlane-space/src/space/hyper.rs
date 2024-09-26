@@ -56,7 +56,7 @@ impl Location {
         Location::Somewhere(point)
     }
 
-    pub fn ok_or(&self) -> Result<Point, SpaceErr> {
+    pub fn ok_or(&self) -> anyhow::Result<Point> {
         match self {
             Location::Nowhere => Err("Particle is presently nowhere".into()),
             Location::Somewhere(point) => Ok(point.clone()),

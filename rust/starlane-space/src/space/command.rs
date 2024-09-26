@@ -54,7 +54,7 @@ pub mod common {
             }
         }
 
-        pub fn get_substance(&self) -> Result<Substance, SpaceErr> {
+        pub fn get_substance(&self) -> anyhow::Result<Substance> {
             match self {
                 StateSrc::None => Err(err("state has no substance")),
                 StateSrc::Substance(substance) => Ok(*substance.clone()),
@@ -282,14 +282,14 @@ pub mod direct {
         }
 
         impl ToResolved<Set> for SetVar {
-            fn to_resolved(self, env: &Env) -> Result<Set, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Set> {
                 let set: SetCtx = self.to_resolved(env)?;
                 set.to_resolved(env)
             }
         }
 
         impl ToResolved<SetCtx> for SetVar {
-            fn to_resolved(self, env: &Env) -> Result<SetCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<SetCtx> {
                 Ok(SetCtx {
                     point: self.point.to_resolved(env)?,
                     properties: self.properties,
@@ -298,7 +298,7 @@ pub mod direct {
         }
 
         impl ToResolved<Set> for SetCtx {
-            fn to_resolved(self, env: &Env) -> Result<Set, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Set> {
                 Ok(Set {
                     point: self.point.to_resolved(env)?,
                     properties: self.properties,
@@ -326,14 +326,14 @@ pub mod direct {
         }
 
         impl ToResolved<Get> for GetVar {
-            fn to_resolved(self, env: &Env) -> Result<Get, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Get> {
                 let set: GetCtx = self.to_resolved(env)?;
                 set.to_resolved(env)
             }
         }
 
         impl ToResolved<GetCtx> for GetVar {
-            fn to_resolved(self, env: &Env) -> Result<GetCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<GetCtx> {
                 Ok(GetCtx {
                     point: self.point.to_resolved(env)?,
                     op: self.op,
@@ -342,7 +342,7 @@ pub mod direct {
         }
 
         impl ToResolved<Get> for GetCtx {
-            fn to_resolved(self, env: &Env) -> Result<Get, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Get> {
                 Ok(Get {
                     point: self.point.to_resolved(env)?,
                     op: self.op,
@@ -405,14 +405,14 @@ pub mod direct {
         }
 
         impl ToResolved<Template> for TemplateVar {
-            fn to_resolved(self, env: &Env) -> Result<Template, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Template> {
                 let template: TemplateCtx = self.to_resolved(env)?;
                 template.to_resolved(env)
             }
         }
 
         impl ToResolved<TemplateCtx> for TemplateVar {
-            fn to_resolved(self, env: &Env) -> Result<TemplateCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<TemplateCtx> {
                 let point: PointTemplateCtx = self.point.to_resolved(env)?;
 
                 let template = TemplateCtx {
@@ -423,7 +423,7 @@ pub mod direct {
             }
         }
         impl ToResolved<Template> for TemplateCtx {
-            fn to_resolved(self, env: &Env) -> Result<Template, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Template> {
                 let point = self.point.to_resolved(env)?;
 
                 let template = Template {
@@ -502,14 +502,14 @@ pub mod direct {
         pub type CreateCtx = CreateDef<PointCtx, StateSrc>;
 
         impl ToResolved<Create> for CreateVar {
-            fn to_resolved(self, env: &Env) -> Result<Create, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Create> {
                 let create: CreateCtx = self.to_resolved(env)?;
                 create.to_resolved(env)
             }
         }
 
         impl ToResolved<CreateCtx> for CreateVar {
-            fn to_resolved(self, env: &Env) -> Result<CreateCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<CreateCtx> {
                 let template = self.template.to_resolved(env)?;
                 let state = match &self.state {
                     StateSrcVar::None => StateSrc::None,
@@ -560,7 +560,7 @@ pub mod direct {
         }
 
         impl ToResolved<Create> for CreateCtx {
-            fn to_resolved(self, env: &Env) -> Result<Create, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Create> {
                 let template = self.template.to_resolved(env)?;
                 Ok(Create {
                     template,
@@ -640,7 +640,7 @@ pub mod direct {
 
         #[async_trait]
         impl PointFactory for PointFactoryU64 {
-            async fn create(&self) -> Result<Point, SpaceErr> {
+            async fn create(&self) -> anyhow::Result<Point> {
                 let index = self.atomic.fetch_add(1u64, Ordering::Relaxed);
                 self.parent.push(format!("{}{}", self.prefix, index))
             }
@@ -657,7 +657,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplateCtx> for PointTemplateVar {
-            fn to_resolved(self, env: &Env) -> Result<PointTemplateCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplateCtx> {
                 let parent = self.parent.to_resolved(env)?;
                 Ok(PointTemplateCtx {
                     parent,
@@ -667,7 +667,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplate> for PointTemplateCtx {
-            fn to_resolved(self, env: &Env) -> Result<PointTemplate, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplate> {
                 let parent = self.parent.to_resolved(env)?;
                 Ok(PointTemplate {
                     parent,
@@ -677,7 +677,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplate> for PointTemplateVar {
-            fn to_resolved(self, env: &Env) -> Result<PointTemplate, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplate> {
                 let ctx: PointTemplateCtx = self.to_resolved(env)?;
                 ctx.to_resolved(env)
             }
@@ -711,7 +711,7 @@ pub mod direct {
         }
 
         impl SelectIntoSubstance {
-            pub fn to_primitive(&self, stubs: Vec<Stub>) -> Result<SubstanceList, SpaceErr> {
+            pub fn to_primitive(&self, stubs: Vec<Stub>) -> anyhow::Result<SubstanceList> {
                 match self {
                     SelectIntoSubstance::Stubs => {
                         let stubs: Vec<Box<Substance>> = stubs
@@ -738,7 +738,7 @@ pub mod direct {
         pub type SelectVar = SelectDef<Hop>;
 
         impl ToResolved<Select> for Select {
-            fn to_resolved(self, env: &Env) -> Result<Select, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Select> {
                 Ok(self)
             }
         }
@@ -874,7 +874,7 @@ pub mod direct {
         pub type DeleteVar = DeleteDef<Hop>;
 
         impl ToResolved<Delete> for Delete {
-            fn to_resolved(self, env: &Env) -> Result<Delete, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Delete> {
                 Ok(self)
             }
         }
@@ -915,7 +915,7 @@ pub mod direct {
         }
 
         impl ToResolved<WriteCtx> for WriteVar {
-            fn to_resolved(self, env: &Env) -> Result<WriteCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<WriteCtx> {
                 Ok(WriteCtx {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -924,7 +924,7 @@ pub mod direct {
         }
 
         impl ToResolved<Write> for WriteCtx {
-            fn to_resolved(self, env: &Env) -> Result<Write, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Write> {
                 Ok(Write {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -953,7 +953,7 @@ pub mod direct {
         }
 
         impl ToResolved<ReadCtx> for ReadVar {
-            fn to_resolved(self, env: &Env) -> Result<ReadCtx, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<ReadCtx> {
                 Ok(ReadCtx {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -962,7 +962,7 @@ pub mod direct {
         }
 
         impl ToResolved<Read> for ReadCtx {
-            fn to_resolved(self, env: &Env) -> Result<Read, SpaceErr> {
+            fn to_resolved(self, env: &Env) -> anyhow::Result<Read> {
                 Ok(Read {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -992,7 +992,7 @@ pub mod direct {
         impl TryInto<PointHierarchy> for QueryResult {
             type Error = SpaceErr;
 
-            fn try_into(self) -> Result<PointHierarchy, SpaceErr> {
+            fn try_into(self) -> anyhow::Result<PointHierarchy> {
                 match self {
                     QueryResult::PointHierarchy(hierarchy) => Ok(hierarchy),
                 }
@@ -1066,14 +1066,14 @@ impl FromStr for CommandVar {
 }
 
 impl ToResolved<Command> for CommandVar {
-    fn to_resolved(self, env: &Env) -> Result<Command, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Command> {
         let command: CommandCtx = self.to_resolved(env)?;
         command.to_resolved(env)
     }
 }
 
 impl ToResolved<CommandCtx> for CommandVar {
-    fn to_resolved(self, env: &Env) -> Result<CommandCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<CommandCtx> {
         Ok(match self {
             CommandVar::Create(i) => CommandCtx::Create(i.to_resolved(env)?),
             CommandVar::Select(i) => CommandCtx::Select(i.to_resolved(env)?),
@@ -1087,7 +1087,7 @@ impl ToResolved<CommandCtx> for CommandVar {
 }
 
 impl ToResolved<Command> for CommandCtx {
-    fn to_resolved(self, env: &Env) -> Result<Command, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Command> {
         Ok(match self {
             CommandCtx::Create(i) => Command::Create(i.to_resolved(env)?),
             CommandCtx::Select(i) => Command::Select(i.to_resolved(env)?),

@@ -100,7 +100,7 @@ impl Uuid {
     }
      */
 
-    pub fn from<S: ToString>(uuid: S) -> Result<Self, SpaceErr> {
+    pub fn from<S: ToString>(uuid: S) -> anyhow::Result<Self> {
         //Ok(Self::new(uuid::Uuid::from_str(uuid.to_string().as_str()).map_err(|e| UniErr::server_error(format!("'{}' is not a valid uuid",uuid.to_string())))?))
         Ok(Self {
             uuid: uuid.to_string(),
@@ -227,7 +227,7 @@ impl<V> ToResolved<V> for VarVal<V>
 where
     V: FromStr<Err = SpaceErr>,
 {
-    fn to_resolved(self, env: &Env) -> Result<V, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<V> {
         match self {
             VarVal::Var(var) => match env.val(var.as_str()) {
                 Ok(val) => {
@@ -658,7 +658,7 @@ impl FromStr for StarKey {
 
 #[async_trait]
 pub trait PointFactory: Send + Sync {
-    async fn create(&self) -> Result<Point, SpaceErr>;
+    async fn create(&self) -> anyhow::Result<Point>;
 }
 
 #[cfg(test)]

@@ -595,11 +595,11 @@ impl ToRecipients for Point {
 }
 
 impl PointVar {
-    pub fn to_point(self) -> Result<Point, SpaceErr> {
+    pub fn to_point(self) -> anyhow::Result<Point> {
         self.collapse()
     }
 
-    pub fn to_point_ctx(self) -> Result<PointCtx, SpaceErr> {
+    pub fn to_point_ctx(self) -> anyhow::Result<PointCtx> {
         self.collapse()
     }
 }
@@ -617,7 +617,7 @@ impl ToSurface for Point {
 }
 
 impl ToResolved<Point> for PointVar {
-    fn to_resolved(self, env: &Env) -> Result<Point, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Point> {
         let point_ctx: PointCtx = self.to_resolved(env)?;
         point_ctx.to_resolved(env)
     }
@@ -633,13 +633,13 @@ impl Into<Selector> for Point {
 }
 
 impl PointCtx {
-    pub fn to_point(self) -> Result<Point, SpaceErr> {
+    pub fn to_point(self) -> anyhow::Result<Point> {
         self.collapse()
     }
 }
 
 impl ToResolved<PointCtx> for PointVar {
-    fn collapse(self) -> Result<PointCtx, SpaceErr> {
+    fn collapse(self) -> anyhow::Result<PointCtx> {
         let route = self.route.try_into()?;
         let mut segments = vec![];
         for segment in self.segments {
@@ -648,7 +648,7 @@ impl ToResolved<PointCtx> for PointVar {
         Ok(PointCtx { route, segments })
     }
 
-    fn to_resolved(self, env: &Env) -> Result<PointCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PointCtx> {
         let mut rtn = String::new();
         let mut after_fs = false;
         let mut errs = vec![];
@@ -774,7 +774,7 @@ impl ToResolved<PointCtx> for PointVar {
 }
 
 impl ToResolved<Point> for PointCtx {
-    fn collapse(self) -> Result<Point, SpaceErr> {
+    fn collapse(self) -> anyhow::Result<Point> {
         let mut segments = vec![];
         for segment in self.segments {
             segments.push(segment.try_into()?);
@@ -785,7 +785,7 @@ impl ToResolved<Point> for PointCtx {
         })
     }
 
-    fn to_resolved(self, env: &Env) -> Result<Point, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<Point> {
         if self.segments.is_empty() {
             return Ok(Point {
                 route: self.route,
@@ -973,7 +973,7 @@ impl Point {
     }
 
     /// returns the "file" path portion of this Point if there is one
-    pub fn truncate_filepath(&self, parent: &Point) -> Result<String, SpaceErr> {
+    pub fn truncate_filepath(&self, parent: &Point) -> anyhow::Result<String> {
         if self.non_file_parent() == *parent {
             self.filepath().ok_or(SpaceErr::str(format!(
                 "could not get filepath for point {}",
@@ -989,7 +989,7 @@ impl Point {
     }
 
     /// returns the "file" path portion of this Point if there is one
-    pub fn relative_segs(&self, parent: &Point) -> Result<Vec<String>, SpaceErr> {
+    pub fn relative_segs(&self, parent: &Point) -> anyhow::Result<Vec<String>> {
         if self.route != parent.route {
             return Result::Err(SpaceErr::from(format!(
                 "parent point route {} must match child point route: {}",
@@ -1067,7 +1067,7 @@ impl Point {
         ANONYMOUS.clone()
     }
 
-    pub fn normalize(self) -> Result<Point, SpaceErr> {
+    pub fn normalize(self) -> anyhow::Result<Point> {
         if self.is_normalized() {
             return Ok(self);
         }
@@ -1129,7 +1129,7 @@ impl Point {
         true
     }
 
-    pub fn to_bundle(self) -> Result<Point, SpaceErr> {
+    pub fn to_bundle(self) -> anyhow::Result<Point> {
         if self.segments.is_empty() {
             return Err("Point does not contain a bundle".into());
         }
@@ -1206,7 +1206,7 @@ impl Point {
             segments,
         }
     }
-    pub fn push<S: ToString>(&self, segment: S) -> Result<Self, SpaceErr> {
+    pub fn push<S: ToString>(&self, segment: S) -> anyhow::Result<Self> {
         let segment = segment.to_string();
         if self.segments.is_empty() {
             Self::from_str(segment.as_str())
@@ -1239,11 +1239,11 @@ impl Point {
         }
     }
 
-    pub fn push_file(&self, segment: String) -> Result<Self, SpaceErr> {
+    pub fn push_file(&self, segment: String) -> anyhow::Result<Self> {
         Self::from_str(format!("{}{}", self.to_string(), segment).as_str())
     }
 
-    pub fn push_segment(&self, segment: PointSeg) -> Result<Self, SpaceErr> {
+    pub fn push_segment(&self, segment: PointSeg) -> anyhow::Result<Self> {
         if (self.has_filesystem() && segment.is_filesystem_seg()) || segment.kind().is_mesh_seg() {
             let mut point = self.clone();
             point.segments.push(segment);
@@ -1296,7 +1296,7 @@ impl Point {
         }
     }
 
-    pub fn truncate(self, kind: PointSegKind) -> Result<Point, SpaceErr> {
+    pub fn truncate(self, kind: PointSegKind) -> anyhow::Result<Point> {
         let mut segments = vec![];
         for segment in &self.segments {
             segments.push(segment.clone());

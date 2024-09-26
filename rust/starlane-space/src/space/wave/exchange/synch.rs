@@ -89,7 +89,7 @@ impl ProtoTransmitter {
         let mut ping: DirectedProto = ping.into();
         ping.bounce_backs = Some(BounceBacks::Single);
         if let Some(DirectedKind::Ping) = ping.kind {
-            self.direct(ping)
+            sel.direct(ping)
         } else {
             Err(err("expected DirectedKind::Ping"))?
         }
