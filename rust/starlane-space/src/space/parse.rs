@@ -3501,7 +3501,7 @@ pub mod model {
     use std::fmt::Write;
     use std::ops::{Deref, DerefMut};
     use std::str::FromStr;
-
+    use anyhow::anyhow;
     use regex::Regex;
     use serde::de::Visitor;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -3668,7 +3668,7 @@ pub mod model {
 
         pub fn from<I: ToString>(selector: LexScopeSelector<I>) -> anyhow::Result<Self> {
             if selector.name.to_string().as_str() != "Route" {
-                return Err(e
+                return Err(anyhow!("expecting Route"))
             }
             let path = match selector.path {
                 None => None,
