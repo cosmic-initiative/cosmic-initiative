@@ -34,6 +34,8 @@ use space::wave::Agent;
 
 pub mod space;
 
+#[cfg(test)]
+pub mod test;
 /*
 pub fn starlane_uuid() -> Uuid {
     uuid::Uuid::new_v4().to_string()
