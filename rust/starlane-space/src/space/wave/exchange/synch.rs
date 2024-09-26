@@ -13,6 +13,8 @@ use crate::space::wave::{
 use crate::{Agent, ReflectedCore, SpaceErr, Substance, Surface, ToSubstance};
 use alloc::borrow::Cow;
 use std::sync::Arc;
+use anyhow::anyhow;
+use crate::space::thiserr::err;
 
 pub trait ExchangeRouter: Send + Sync {
     fn route(&self, wave: Wave);
@@ -89,11 +91,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ping) = ping.kind {
             self.direct(ping)
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))?
         }
     }
 
-    pub fn ripple<D>(&self, ripple: D) -> Result<Vec<WaveVariantDef<EchoCore>>, SpaceErr>
+    pub fn ripple<D>(&self, ripple: D) -> anyhow::Result<Vec<WaveVariantDef<EchoCore>>>
     where
         D: Into<DirectedProto>,
     {
@@ -101,11 +103,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ripple) = ripple.kind {
             self.direct(ripple)
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(anyhow!("expected DirectedKind::Ping"))
         }
     }
 
-    pub fn signal<D>(&self, signal: D) -> Result<(), SpaceErr>
+    pub fn signal<D>(&self, signal: D) -> Result<()>
     where
         D: Into<DirectedProto>,
     {

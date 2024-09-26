@@ -6,6 +6,7 @@ use crate::space::point::Point;
 use crate::space::wave::exchange::asynch::Exchanger;
 use crate::space::wave::{DirectedWave, PingCore, PongCore, ReflectedWave, SingularDirectedWave, Wave, WaveVariantDef};
 use crate::{ParticleRecord, SpaceErr, Surface};
+use crate::space::thiserr::err;
 
 #[async_trait]
 pub trait TraversalLayer {

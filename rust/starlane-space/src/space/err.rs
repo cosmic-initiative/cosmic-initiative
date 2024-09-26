@@ -21,8 +21,9 @@ use crate::space::parse::error::find_parse_err;
 use serde::{Deserialize, Serialize};
 use crate::space::thiserr::ThisErr;
 
-pub type SpaceErr=ThisErr;
+pub type SpaceErr=anyhow::Error;
 
+pub type AnyhowResult<T> = anyhow::Result<T>;
 
 
 

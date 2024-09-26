@@ -14,7 +14,7 @@ pub enum ThisErr {
     TokioRecvErr( #[from] tokio::sync::oneshot::error::RecvError)
 }
 
-pub fn err<E>( e: E ) -> ThisErr where E:ToString{
+pub fn err<I,O>( e: I ) -> ThisErr where I:ToString, O: std::error::Error {
     ThisErr::String(e.to_string())
 }
 

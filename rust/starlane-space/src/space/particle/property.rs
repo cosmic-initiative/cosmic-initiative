@@ -1,7 +1,7 @@
 use core::str::FromStr;
 use std::collections::HashMap;
 use std::ops::Deref;
-
+use anyhow::anyhow;
 use validator::validate_email;
 
 use crate::space::command::common::PropertyMod;
@@ -331,11 +331,9 @@ impl PropertiesConfigBuilder {
         rtn
     }
 
-    pub fn build(self) -> Result<PropertiesConfig, SpaceErr> {
+    pub fn build(self) -> anyhow::Result<PropertiesConfig> {
         Ok(PropertiesConfig {
-            kind: self.kind.ok_or(err(
-                "kind must be set before PropertiesConfig can be built",
-            ))?,
+            kind: self.kind.ok_or(anyhow!("kind must be set before PropertiesConfig can be built") )?,
             properties: self.properties,
         })
     }
