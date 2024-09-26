@@ -56,7 +56,7 @@ pub mod common {
 
         pub fn get_substance(&self) -> Result<Substance, SpaceErr> {
             match self {
-                StateSrc::None => Err(SpaceErr::server_error("state has no substance")),
+                StateSrc::None => Err(err("state has no substance")),
                 StateSrc::Substance(substance) => Ok(*substance.clone()),
             }
         }
@@ -516,11 +516,11 @@ pub mod direct {
                     StateSrcVar::FileRef(name) => StateSrc::Substance(Box::new(Substance::Bin(
                         env.file(name)
                             .map_err(|e| match e {
-                                ResolverErr::NotAvailable => SpaceErr::server_error(
+                                ResolverErr::NotAvailable => err(
                                     "files are not available in this context",
                                 ),
                                 ResolverErr::NotFound => {
-                                    SpaceErr::server_error(format!("cannot find file '{}'", name))
+                                    err(format!("cannot find file '{}'", name))
                                 }
                             })?
                             .content,
@@ -528,9 +528,9 @@ pub mod direct {
                     StateSrcVar::Var(var) => {
                         let val = env.val(var.name.as_str()).map_err(|e| match e {
                             ResolverErr::NotAvailable => {
-                                SpaceErr::server_error("variable are not available in this context")
+                                err("variable are not available in this context")
                             }
-                            ResolverErr::NotFound => SpaceErr::server_error(format!(
+                            ResolverErr::NotFound => err(format!(
                                 "cannot find variable '{}'",
                                 var.name
                             )),
@@ -538,10 +538,10 @@ pub mod direct {
                         StateSrc::Substance(Box::new(Substance::Bin(
                             env.file(val.clone())
                                 .map_err(|e| match e {
-                                    ResolverErr::NotAvailable => SpaceErr::server_error(
+                                    ResolverErr::NotAvailable => err(
                                         "files are not available in this context",
                                     ),
-                                    ResolverErr::NotFound => SpaceErr::server_error(format!(
+                                    ResolverErr::NotFound => err(format!(
                                         "cannot find file '{}'",
                                         val.to_text().unwrap_or("err".to_string())
                                     )),

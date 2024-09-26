@@ -11,6 +11,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::watch;
+use crate::space::thiserr::err;
 
 #[derive(Clone)]
 pub struct ArtifactApi {
@@ -155,7 +156,7 @@ impl ArtifactFetcher for ReadArtifactFetcher {
         pong.core.ok_or()?;
         match pong.variant.core.body {
             Substance::Bin(bin) => Ok(bin),
-            other => Err(SpaceErr::server_error(format!(
+            other => Err(err(format!(
                 "expected Bin, encountered unexpected substance {} when fetching Artifact",
                 other.kind().to_string()
             ))),

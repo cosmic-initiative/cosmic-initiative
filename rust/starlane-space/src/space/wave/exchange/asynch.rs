@@ -20,7 +20,9 @@ use alloc::borrow::Cow;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 use std::time::Duration;
+use thiserror::__private::ThiserrorProvide;
 use tokio::sync::{mpsc, oneshot};
+use crate::space::thiserr::{err, ThisErr};
 
 #[async_trait]
 impl Router for TxRouter {
@@ -115,7 +117,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ping) = ping.kind {
             self.direct(ping).await
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 
@@ -127,7 +129,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ripple) = ripple.kind {
             self.direct(ripple).await
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 
@@ -139,7 +141,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Signal) = signal.kind {
             self.direct(signal).await
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 
@@ -351,7 +353,7 @@ impl Exchanger {
                 .claimed
                 .contains(reflect.reflection_of().to_string().as_str())
             {
-                return Err(SpaceErr::server_error(format!(
+                return Err(err(format!(
                     "Reflection already claimed for {} from: {} to: {} KIND: {} STATUS: {}",
                     reflect.reflection_of().to_short_string(),
                     reflect.from().to_string(),
@@ -360,7 +362,7 @@ impl Exchanger {
                     reflect.core().status.to_string()
                 )));
             }
-            return Err(SpaceErr::server_error(format!(
+            return Err(err(format!(
                 "Not expecting reflected message for {} from: {} to: {} KIND: {} STATUS: {}",
                 reflect.reflection_of().to_short_string(),
                 reflect.from().to_string(),

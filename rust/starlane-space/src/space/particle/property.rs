@@ -333,7 +333,7 @@ impl PropertiesConfigBuilder {
 
     pub fn build(self) -> Result<PropertiesConfig, SpaceErr> {
         Ok(PropertiesConfig {
-            kind: self.kind.ok_or(SpaceErr::server_error(
+            kind: self.kind.ok_or(err(
                 "kind must be set before PropertiesConfig can be built",
             ))?,
             properties: self.properties,

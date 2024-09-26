@@ -1,16 +1,32 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use crate::space::err::{ParseErrs, SpaceErr, StatusErr, ThisErr};
+use crate::space::err::{ParseErrs, SpaceErr};
 use crate::space::substance::Substance;
+use crate::space::thiserr;
 use crate::space::wave::core::http2::StatusCode;
 use crate::space::wave::core::{CoreReflector, ReflectedCore};
-#[derive(Debug, Clone, Serialize, Deserialize,Error)]
+#[derive(Debug, Clone, Serialize, Deserialize,Error,Display)]
 pub enum ThisErr {
+    String(#[from] String),
     Status { status: u16, message: String },
     ParseErrs(#[from] ParseErrs),
+    Error( #[from] Box<dyn std::error::Error+Send+Sync>),
+    TokioRecvErr( #[from] tokio::sync::oneshot::error::RecvError)
 }
 
-impl_context!(ThisError(ThisErrorInner));
+pub fn err<E>( e: E ) -> ThisErr where E:ToString{
+    ThisErr::String(e.to_string())
+}
+
+impl ThisErr {
+    pub fn new( status: u16, message: String ) -> Self {
+        Self::Status {
+            status,
+            message
+        }
+    }
+}
+
 
 impl Into<ReflectedCore> for ThisErr {
     fn into(self) -> ReflectedCore {
@@ -74,7 +90,7 @@ impl ThisErr{
     where
         S: ToString,
     {
-        ThisErr::new(500, s)
+        ThisErr::new(500u16, s)
     }
 
     pub fn from_status(status: u16) -> ThisErr {
@@ -88,7 +104,6 @@ impl ThisErr{
         };
         ThisErr::Status { status, message }
     }
-
     fn status(&self) -> u16 {
         match self {
             SpaceErr::Status { status, .. } => status.clone(),
@@ -105,15 +120,7 @@ impl ThisErr{
 }
 
 
-impl CoreReflector for ThisErr {
-    fn as_reflected_core(self) -> ReflectedCore {
-        ReflectedCore {
-            headers: Default::default(),
-            status: StatusCode::from_u16(self.status()).unwrap(),
-            body: Substance::Err(self),
-        }
-    }
-}
+
 
 impl ThisErr {
     pub fn str<S: ToString>(s: S) -> ThisErr {

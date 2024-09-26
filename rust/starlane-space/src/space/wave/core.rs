@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-
+use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 use starlane_primitive_macros::Autobox;
 
 use crate::space::command::Command;
-use crate::space::err::StatusErr;
 use crate::space::loc::ToSurface;
 use crate::space::substance::FormErrs;
 use crate::space::util::{ValueMatcher, ValuePattern};
@@ -16,20 +15,13 @@ use crate::space::wave::core::hyp::HypMethod;
 use crate::space::wave::{Bounce, PingCore, PongCore, ToRecipients, WaveId};
 use crate::{SpaceErr, Substance, Surface, ToSubstance};
 use url::Url;
+use crate::space::thiserr::ThisErr;
 
 pub mod cmd;
 pub mod ext;
 pub mod http2;
 pub mod hyp;
 
-impl From<Result<ReflectedCore, SpaceErr>> for ReflectedCore {
-    fn from(result: Result<ReflectedCore, SpaceErr>) -> Self {
-        match result {
-            Ok(response) => response,
-            Err(err) => err.into(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ReflectedCore {
@@ -212,7 +204,7 @@ impl ReflectedCore {
         } else if let Substance::Err(err) = &self.body {
             Err(err.clone())
         } else {
-            Err(SpaceErr::new(self.status.as_u16(), "error"))
+            Err(ThisErr::new(self.status.as_u16(), "error"))
         }
     }
 }
@@ -601,7 +593,8 @@ impl DirectedCore {
         }
     }
 
-    pub fn err<E: StatusErr>(&self, error: E) -> ReflectedCore {
+    pub fn err<E: Error>(&self, error: E) -> ReflectedCore {
+
         let errors = FormErrs::default(error.message().as_str());
         let status = match StatusCode::from_u16(error.status()) {
             Ok(status) => status,

@@ -89,7 +89,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ping) = ping.kind {
             self.direct(ping)
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 
@@ -101,7 +101,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ripple) = ripple.kind {
             self.direct(ripple)
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 
@@ -113,7 +113,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Signal) = signal.kind {
             self.direct(signal)
         } else {
-            Err(SpaceErr::server_error("expected DirectedKind::Ping"))
+            Err(err("expected DirectedKind::Ping"))
         }
     }
 

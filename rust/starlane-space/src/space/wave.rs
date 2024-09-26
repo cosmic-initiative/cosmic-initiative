@@ -260,7 +260,7 @@ impl Wave {
             Wave::Pong(pong) => Ok(SingularWave::Pong(pong)),
             Wave::Echo(echo) => Ok(SingularWave::Echo(echo)),
             Wave::Signal(signal) => Ok(SingularWave::Signal(signal)),
-            Wave::Ripple(_) => Err(SpaceErr::server_error(
+            Wave::Ripple(_) => Err(err(
                 "cannot change Ripple into a singular",
             )),
         }
@@ -2128,7 +2128,7 @@ where
                 ripple.bounce_backs = bounce_backs;
                 Ok(())
             }
-            _ => Err(SpaceErr::server_error(
+            _ => Err(err(
                 "can only set bouncebacks for Ripple",
             )),
         }
@@ -2440,7 +2440,7 @@ impl Recipients {
     pub fn to_single(self) -> Result<Surface, SpaceErr> {
         match self {
             Recipients::Single(surface) => Ok(surface),
-            _ => Err(SpaceErr::server_error(
+            _ => Err(err(
                 "cannot convert a multiple recipient into a single",
             )),
         }
@@ -2710,14 +2710,14 @@ impl WaveVariantDef<SignalCore> {
 
     pub fn unwrap_from_hop(self) -> Result<WaveVariantDef<SignalCore>, SpaceErr> {
         if self.method != Method::Hyp(HypMethod::Hop) {
-            return Err(SpaceErr::server_error(
+            return Err(err(
                 "expected signal wave to have method Hop",
             ));
         }
         if let Substance::Wave(wave) = &self.body {
             Ok((*wave.clone()).to_signal()?)
         } else {
-            Err(SpaceErr::server_error(
+            Err(err(
                 "expected body substance to be of type Wave for a transport signal",
             ))
         }
@@ -2725,14 +2725,14 @@ impl WaveVariantDef<SignalCore> {
 
     pub fn unwrap_from_transport(self) -> Result<Wave, SpaceErr> {
         if self.method != Method::Hyp(HypMethod::Transport) {
-            return Err(SpaceErr::server_error(
+            return Err(err(
                 "expected signal wave to have method Transport",
             ));
         }
         if let Substance::Wave(wave) = &self.body {
             Ok(*wave.clone())
         } else {
-            Err(SpaceErr::server_error(
+            Err(err(
                 "expected body substance to be of type Wave for a transport signal",
             ))
         }

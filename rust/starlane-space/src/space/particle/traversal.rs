@@ -17,7 +17,7 @@ pub trait TraversalLayer {
     fn exchanger(&self) -> &Exchanger;
 
     async fn deliver_directed(&self, direct: Traversal<DirectedWave>) -> Result<(), SpaceErr> {
-        Err(SpaceErr::server_error(
+        Err(err(
             "this layer does not handle directed messages",
         ))
     }

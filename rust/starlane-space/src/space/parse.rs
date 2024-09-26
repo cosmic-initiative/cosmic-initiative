@@ -3522,6 +3522,7 @@ pub mod model {
         ,
     };
     use crate::space::point::{Point, PointCtx, PointVar};
+    use crate::space::thiserr::err;
     use crate::space::util::{ToResolved, ValueMatcher, ValuePattern};
     use crate::space::wave::core::{Method, MethodKind};
     use crate::space::wave::{DirectedWave, SingularDirectedWave};
@@ -3667,7 +3668,7 @@ pub mod model {
 
         pub fn from<I: ToString>(selector: LexScopeSelector<I>) -> Result<Self, SpaceErr> {
             if selector.name.to_string().as_str() != "Route" {
-                return Err(SpaceErr::server_error("expected Route"));
+                return Err(err("expected Route"));
             }
             let path = match selector.path {
                 None => None,
