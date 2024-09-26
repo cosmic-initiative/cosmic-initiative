@@ -1,7 +1,7 @@
 use core::borrow::Borrow;
 use std::ops::Deref;
 use std::sync::Arc;
-
+use nom_supreme::final_parser::ExtractContext;
 use serde::{Deserialize, Serialize};
 
 use crate::space::loc::ToSurface;
@@ -34,7 +34,7 @@ where
 
 impl<A> ArtRef<A> {
     pub fn bundle(&self) -> Point {
-        self.point.clone().to_bundle().unwrap()
+        self.point.clone().to_bundle().extract_context()
     }
     pub fn point(&self) -> &Point {
         &self.point

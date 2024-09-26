@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 use serde::{Deserialize, Serialize};
 
 use crate::space::command::RawCommand;
-use crate::space::err::{CoreReflector, SpaceErr, StatusErr};
+use crate::space::err::{SpaceErr};
 use crate::space::loc::{Surface, ToPoint, ToSurface, Uuid};
 use crate::space::log::{
     Spannable, Trackable, TrailSpanId,
@@ -29,7 +29,7 @@ use self::core::cmd::CmdMethod;
 use self::core::ext::ExtMethod;
 use self::core::http2::HttpMethod;
 use self::core::hyp::HypMethod;
-use self::core::{CoreBounce, DirectedCore, Method, ReflectedCore};
+use self::core::{CoreBounce, CoreReflector, DirectedCore, Method, ReflectedCore};
 
 pub mod core;
 pub mod exchange;

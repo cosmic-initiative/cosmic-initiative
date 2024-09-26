@@ -677,3 +677,7 @@ impl ValueMatcher<MethodKind> for MethodKind {
 }
 
 pub type HeaderMap = HashMap<String, String>;
+
+pub trait CoreReflector {
+    fn as_reflected_core(self) -> ReflectedCore;
+}

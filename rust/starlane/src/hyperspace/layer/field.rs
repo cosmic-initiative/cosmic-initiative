@@ -5,7 +5,7 @@ use url::Url;
 
 use starlane::space::artifact::ArtRef;
 use starlane::space::config::bind::{BindConfig, PipelineStepVar, PipelineStopVar};
-use starlane::space::err::{CoreReflector, SpaceErr, StatusErr};
+use starlane::space::err::{SpaceErr, StatusErr};
 use starlane::space::loc::{Layer, Surface, ToSurface};
 use starlane::space::log::{PointLogger, Trackable};
 use starlane::space::parse::model::{PipelineSegmentVar, PipelineVar};
@@ -21,7 +21,7 @@ use starlane::space::wave::exchange::asynch::{Exchanger, TraversalTransmitter};
 use starlane::space::wave::{
     BounceBacks, DirectedKind, DirectedProto, DirectedWave, EchoCore, PongCore, Reflection, Wave, WaveVariantDef,
 };
-
+use starlane_space::space::wave::core::CoreReflector;
 use crate::hyperspace::err::HyperErr;
 use crate::platform::Platform;
 use crate::hyperspace::star::{HyperStarSkel, TraverseToNextRouter};
