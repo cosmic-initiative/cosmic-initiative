@@ -59,7 +59,7 @@ impl Location {
 
     pub fn ok_or(&self) -> err::Result<Point> {
         match self {
-            Location::Nowhere => Err("Particle is presently nowhere".into()),
+            Location::Nowhere => Err(err!("Particle is presently nowhere")),
             Location::Somewhere(point) => Ok(point.clone()),
 
             Location::Central => Ok(Point::central()),

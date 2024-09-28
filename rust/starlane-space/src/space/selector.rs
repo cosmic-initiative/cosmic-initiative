@@ -9,6 +9,7 @@ use std::ops::Deref;
 use specific::{ProductSelector, ProviderSelector, VariantSelector, VendorSelector};
 use starlane_parse::{new_span, Trace};
 use crate::space::err;
+use crate::space::err::err;
 use crate::space::kind::{BaseKind, Kind, KindParts, Specific};
 use crate::space::loc::{Layer, ToBaseKind, Topic, VarVal, Variable, Version};
 use crate::space::parse::error::result;

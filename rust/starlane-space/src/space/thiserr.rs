@@ -4,12 +4,11 @@ use crate::space::wave::core::http2::StatusCode;
 use crate::space::wave::core::{CoreReflector, ReflectedCore};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-#[derive(Debug, Clone, Serialize, Deserialize,Error,Display)]
+#[derive(Debug, Clone, Error,Display)]
 pub enum ThisErr {
     String(#[from] String),
     Status { status: u16, message: String },
     ParseErrs(#[from] ParseErrs),
-    Error( #[from] Box<dyn std::error::Error+Send+Sync>),
     TokioRecvErr( #[from] tokio::sync::oneshot::error::RecvError)
 }
 

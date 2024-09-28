@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
-
-use crate::space::err::Error;
+use crate::space::err;
+use crate::space::err::{err, Error};
 use crate::space::loc::Topic;
 use crate::space::parse::model::{
     BindScope, MethodScope, PipelineSegmentDef, RouteScope,

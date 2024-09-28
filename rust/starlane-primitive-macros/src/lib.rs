@@ -83,7 +83,7 @@ pub fn autobox(item: TokenStream) -> TokenStream {
                                     fn try_into(self) -> Result<#ty,Self::Error> {
                                         match self {
                                         Self::#variant_ident(val) => Ok(*val),
-                                        _ => Err(err!(format!("expected {}",#ty_str)))
+                                        _ => Err(err!("expected {}",#ty_str))
                                         }
                                     }
                                 }
@@ -105,7 +105,7 @@ pub fn autobox(item: TokenStream) -> TokenStream {
                                     fn try_into(self) -> Result<#ty,Self::Error> {
                                         match self {
                                             Self::#variant_ident(val) => Ok(val),
-                                            _ => Err(format!("expected {}",#ty_str).into())
+                                            _ => Err(err!("expected {}",#ty_str).into())
                                         }
                                     }
                                 }

@@ -110,7 +110,6 @@ pub enum Substance {
     Knock(Knock),
     Greet(Greet),
     Log(LogSubstance),
-    Err(String),
 }
 
 impl Substance {
@@ -201,7 +200,7 @@ impl Substance {
         if let Substance::Text(text) = self {
             Ok(text)
         } else {
-            Err("not a 'Text' payload".into())
+            Err(err!("not a 'Text' payload"))
         }
     }
 
@@ -251,7 +250,6 @@ impl Substance {
             Substance::Details(_) => SubstanceKind::Details,
             Substance::Location(_) => SubstanceKind::Location,
             Substance::Log(_) => SubstanceKind::Log,
-            Substance::Err(_) => SubstanceKind::Err,
         }
     }
 
@@ -294,7 +292,7 @@ impl TryInto<HashMap<String, Substance>> for Substance {
     fn try_into(self) -> Result<HashMap<String, Substance>, Self::Error> {
         match self {
             Substance::Map(map) => Ok(map.map),
-            _ => Err("Substance type must a Map".into()),
+            _ => Err(err!("Substance type must a Map"))
         }
     }
 }
@@ -372,12 +370,7 @@ impl FormErrs {
 
 impl From<err::Error> for FormErrs {
     fn from(err: err::Error) -> Self {
-        match err {
-            err::Error::Status { status, message } => {
-                Self::default(format!("{} {}", status, message).as_str())
-            }
-            err::Error::ParseErrs(_) => Self::default("500: parse error"),
-        }
+        Self::default("500: parse error")
     }
 }
 
@@ -490,7 +483,7 @@ impl ToResolved<SubstanceTypePatternDef<Point>> for SubstanceTypePatternDef<Poin
             }
             SubstanceTypePatternDef::List(list) => Ok(SubstanceTypePatternDef::List(list)),
             SubstanceTypePatternDef::Map(map) => {
-                Err("MapPatternCtx resolution not supported yet...".into())
+                Err(err!("MapPatternCtx resolution not supported yet..."))
             }
         }
     }
@@ -505,7 +498,7 @@ impl ToResolved<SubstanceTypePatternCtx> for SubstanceTypePatternVar {
             }
             SubstanceTypePatternVar::List(list) => Ok(SubstanceTypePatternCtx::List(list)),
             SubstanceTypePatternVar::Map(map) => {
-                Err("MapPatternCtx resolution not supported yet...".into())
+                Err(err!("MapPatternCtx resolution not supported yet..."))
             }
         }
     }
@@ -649,7 +642,7 @@ impl ToResolved<SubstancePattern> for SubstancePatternCtx {
                 format: self.format,
             })
         } else {
-            Err(ParseErrs::fold(errs).into())
+            Err(err!("aggregated ParseErrors"))
         }
     }
 }
@@ -700,7 +693,7 @@ impl ToResolved<CallWithConfigCtx> for CallWithConfigVar {
                 config,
             })
         } else {
-            Err(ParseErrs::fold(errs).into())
+            Err(err!("aggregated ParseErrors"))
         }
     }
 }
@@ -732,7 +725,7 @@ impl ToResolved<CallWithConfig> for CallWithConfigCtx {
                 config,
             })
         } else {
-            Err(ParseErrs::fold(errs).into())
+            Err(err!("aggregated ParseErrors"))
         }
     }
 }

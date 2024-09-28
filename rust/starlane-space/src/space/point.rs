@@ -659,30 +659,34 @@ impl ToResolved<PointCtx> for PointVar {
                     let val: String = val.clone().try_into()?;
                     rtn.push_str(format!("{}::", val.as_str()).as_str());
                 }
-                Err(err) => match err {
-                    ResolverErr::NotAvailable => {
-                        errs.push(ParseErrs::from_range(
-                            format!(
-                                "variables not available in this context '{}'",
-                                var.name.clone()
-                            )
-                            .as_str(),
-                            "Not Available",
-                            var.trace.range.clone(),
-                            var.trace.extra.clone(),
-                        ));
-                    }
-                    ResolverErr::NotFound => {
-                        errs.push(ParseErrs::from_range(
-                            format!("variable could not be resolved '{}'", var.name.clone())
-                                .as_str(),
-                            "Not Found",
-                            var.trace.range.clone(),
-                            var.trace.extra.clone(),
-                        ));
-                    }
-                },
-            },
+                Err(err) =>
+
+                        errs.push(err!("variable could not be resolved '{}'", var.name.clone()))
+/*                match err {
+
+                            ResolverErr::NotAvailable => {
+                                errs.push(ParseErrs::from_range(
+                                    format!(
+                                        "variables not available in this context '{}'",
+                                        var.name.clone()
+                                    )
+                                        .as_str(),
+                                    "Not Available",
+                                    var.trace.range.clone(),
+                                    var.trace.extra.clone(),
+                                ));
+                            }
+                            ResolverErr::NotFound => {
+                                errs.push(ParseErrs::from_range(
+                                    format!("variable could not be resolved '{}'", var.name.clone())
+                                        .as_str(),
+                                    "Not Found",
+                                    var.trace.range.clone(),
+                                    var.trace.extra.clone(),
+                                ));
+                            }
+                        }*/
+            }
 
             RouteSegVar::This => {}
             RouteSegVar::Domain(domain) => {
@@ -723,7 +727,15 @@ impl ToResolved<PointCtx> for PointVar {
                         let val: String = val.clone().try_into()?;
                         rtn.push_str(val.as_str());
                     }
-                    Err(err) => match err {
+                    Err(err) =>
+
+                        {
+                            errs.push(err)
+                        }
+
+
+                        /*match err {
+
                         ResolverErr::NotAvailable => {
                             errs.push(ParseErrs::from_range(
                                 format!(
@@ -745,7 +757,7 @@ impl ToResolved<PointCtx> for PointVar {
                                 var.trace.extra.clone(),
                             ));
                         }
-                    },
+                    }*/,
                 }
             } else if PointSegVar::FilesystemRootDir == *segment {
                 after_fs = true;
@@ -998,19 +1010,19 @@ impl Point {
             ));
         }
         if self.segments.len() < parent.segments.len() {
-            return Result::Err(err::Error::from(format!(
+            return Result::Err(err!(
                 "parent point {} cannot have fewer segments than point: {}",
                 parent.to_string(),
                 self.to_string()
-            )));
+            ));
         } else {
             for i in 0..parent.segments.len() {
                 if parent.segments.get(i).unwrap() != self.segments.get(i).unwrap() {
-                    return Result::Err(err::Error::from(format!(
+                    return Result::Err(err!(
                         "parent point {} does not match subset: {}",
                         parent.to_string(),
                         self.to_string()
-                    )));
+                    ));
                 }
             }
 
@@ -1078,7 +1090,7 @@ impl Point {
             .expect("expected first segment")
             .is_normalized()
         {
-            return Err(format!("absolute point paths cannot begin with '..' (reference parent segment) because there is no working point segment: '{}'",self.to_string()).into());
+            return Err(err!("absolute point paths cannot begin with '..' (reference parent segment) because there is no working point segment: '{}'",self.to_string()).into());
         }
 
         let mut segments = vec![];
@@ -1087,7 +1099,7 @@ impl Point {
                 true => segments.push(seg.clone()),
                 false => {
                     if segments.pop().is_none() {
-                        return Err(format!(
+                        return Err(err!(
                             "'..' too many pop segments directives: out of parents: '{}'",
                             self.to_string()
                         )
@@ -1131,7 +1143,7 @@ impl Point {
 
     pub fn to_bundle(self) -> err::Result<Point> {
         if self.segments.is_empty() {
-            return Err("Point does not contain a bundle".into());
+            return Err(err!("Point does not contain a bundle"));
         }
 
         if let Some(PointSeg::Version(_)) = self.segments.last() {
@@ -1233,7 +1245,7 @@ impl Point {
                         format!("{}:{}", self.to_string(), segment)
                     }
                 }
-                PointSeg::File(_) => return Err("cannot append to a file".into()),
+                PointSeg::File(_) => return Err(err!("cannot append to a file")),
             };
             Self::from_str(point.as_str())
         }
@@ -1250,9 +1262,9 @@ impl Point {
             Ok(point)
         } else {
             if self.has_filesystem() {
-                Err("cannot push a Mesh segment onto a point after the FileSystemRoot segment has been pushed".into())
+                Err(err!("cannot push a Mesh segment onto a point after the FileSystemRoot segment has been pushed"))
             } else {
-                Err("cannot push a FileSystem segment onto a point until after the FileSystemRoot segment has been pushed".into())
+                Err(err!("cannot push a FileSystem segment onto a point until after the FileSystemRoot segment has been pushed"))
             }
         }
     }

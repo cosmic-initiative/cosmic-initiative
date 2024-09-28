@@ -210,7 +210,7 @@ impl ReflectedCore {
     pub fn ok_or(&self) -> err::Result<()> {
         if self.is_ok() {
             Ok(())
-        } else if let Substance::Err(err) = &self.body {
+        } else if let Substance::Text(err) = &self.body {
             Err(err!(err.to_string()))
         } else {
             Err(err!("error"))
@@ -605,6 +605,7 @@ impl DirectedCore {
     pub fn err<E: ToString>(&self, error: E) -> ReflectedCore {
 
         let errors = FormErrs::default(error.to_string());
+        let status = StatusCode::from_u16(500u16).unwrap();
 
         ReflectedCore {
             headers: Default::default(),

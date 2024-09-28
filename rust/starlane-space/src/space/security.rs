@@ -15,6 +15,8 @@ use crate::space::point::Point;
 use crate::space::selector::{PointHierarchy, Selector};
 use crate::space::wave::ScopeGrant;
 use crate::Agent;
+use crate::space::err;
+use crate::space::err::err;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Access {
@@ -72,7 +74,7 @@ impl Access {
             Access::SuperOwner => Ok(()),
             Access::Enumerated(enumerated) => match enumerated.privileges.has(privilege).is_ok() {
                 true => Ok(()),
-                false => Err(format!("'{}'", privilege).into()),
+                false => Err(err!("'{}'", privilege)),
             },
         }
     }

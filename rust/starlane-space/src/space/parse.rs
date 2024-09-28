@@ -4827,7 +4827,7 @@ pub mod error {
     use crate::space::parse::model::NestedBlockKind;
     use crate::space::parse::nospace1;
 
-    pub fn result<I: Span, R>(result: err::Result<(I, R), Err<ErrorTree<I>>>) -> err::Result<R> {
+    pub fn result<I: Span, R>(result: Result<(I, R), Err<ErrorTree<I>>>) -> err::Result<R> {
         match result {
             Ok((_, e)) => Ok(e),
             Err(err) => Err(find_parse_err(&err).into()),

@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 pub type Result<T> = anyhow::Result<T>;
 pub use anyhow::anyhow as err;
 pub use anyhow::Error as Error;
+use crate::space::wave::core::ReflectedCore;
 
 #[derive(thiserror::Error, Debug,strum_macros::Display)]
 pub enum SpaceErr {
@@ -36,9 +37,9 @@ impl SpaceErr {
         Self::String(s.to_string())
     }
     pub fn not_found<S: ToString>(message: S) -> Self {
-        Self::new(404u16,message)
+        Self::new(500u16, message)
     }
-    pub fn new<S: ToString>( status: u16, message: S) -> err::Error {
+    pub fn new<S: ToString>( status: u16, message: S) -> Self {
        Self::Status { status: status, message: message.to_string() }
     }
 }
@@ -47,12 +48,12 @@ impl SpaceErr {
 impl<I: Span> From<nom::Err<ErrorTree<I>>> for ParseErrs {
     fn from(err: Err<ErrorTree<I>>) -> Self {
         match find_parse_err(&err) {
-            err::Error::Status { .. } => ParseErrs {
+            Error::Status { .. } => ParseErrs {
                 report: vec![],
                 source: None,
                 ctx: "".to_string(),
             },
-            err::Error::ParseErrs(parse_errs) => parse_errs,
+            Error::ParseErrs(parse_errs) => parse_errs,
         }
     }
 }
@@ -63,6 +64,16 @@ pub struct ParseErrs {
     pub report: Vec<Report>,
     pub source: Option<Arc<String>>,
     pub ctx: String,
+}
+
+impl Default for ParseErrs {
+    fn default() -> Self {
+        Self {
+            report: vec![],
+            source: None,
+            ctx: "".to_string(),
+        }
+    }
 }
 
 impl Display for ParseErrs {
@@ -105,7 +116,7 @@ impl ParseErrs {
         label: &str,
         range: Range<usize>,
         extra: SpanExtra,
-    ) -> err::Error {
+    ) -> Error {
         let mut builder = Report::build(ReportKind::Error, (), 23);
         let report = builder
             .with_message(message)
@@ -114,7 +125,7 @@ impl ParseErrs {
         return ParseErrs::from_report(report, extra).into();
     }
 
-    pub fn from_owned_span<I: Span>(message: &str, label: &str, span: I) -> err::Error {
+    pub fn from_owned_span<I: Span>(message: &str, label: &str, span: I) -> Error {
         let mut builder = Report::build(ReportKind::Error, (), 23);
         let report = builder
             .with_message(message)
@@ -126,6 +137,10 @@ impl ParseErrs {
         return ParseErrs::from_report(report, span.extra()).into();
     }
 
+    pub fn fold<E: ToString>(errs: Vec<E>) -> ParseErrs {
+        ParseErrs::fold(errs)
+    }
+    /*
     pub fn fold<E: Into<ParseErrs>>(errs: Vec<E>) -> ParseErrs {
         let errs: Vec<ParseErrs> = errs.into_iter().map(|e| e.into()).collect();
 
@@ -152,33 +167,14 @@ impl ParseErrs {
         }
         rtn
     }
+
+     */
 }
 
-impl From<err::Error> for ParseErrs {
-    fn from(u: err::Error) -> Self {
-        ParseErrs {
-            report: vec![],
-            source: None,
-            ctx: "".to_string(),
-        }
-    }
-}
 
-impl From<serde_urlencoded::de::Error> for err::Error {
-    fn from(err: serde_urlencoded::de::Error) -> Self {
-        err::Error::Status {
-            status: 500u16,
-            message: err.to_string(),
-        }
-    }
-}
-
-impl From<serde_urlencoded::ser::Error> for err::Error {
-    fn from(err: serde_urlencoded::ser::Error) -> Self {
-        err::Error::Status {
-            status: 500u16,
-            message: err.to_string(),
-        }
+impl Into<ReflectedCore> for Error {
+    fn into(self) -> ReflectedCore {
+        ReflectedCore::err(self)
     }
 }
 

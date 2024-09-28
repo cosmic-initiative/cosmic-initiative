@@ -3,6 +3,8 @@ use crate::space::parse::{CamelCase, Domain, SkewerCase};
 use crate::space::selector::VersionReq;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use crate::space::err;
+use crate::space::err::err;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct SubTypeDef<Part, SubType> {
@@ -86,12 +88,12 @@ pub enum Variant {
 impl Variant {
     pub fn from(kind: &Kind, variant: &CamelCase) -> err::Result<Self> {
         match kind {
-            what => Err(format!(
+            what => Err(err!(
                 "kind '{}' does not have a variant '{}' ",
                 kind.to_string(),
                 variant.to_string()
             )
-            .into()),
+            ),
         }
     }
 }

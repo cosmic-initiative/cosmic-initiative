@@ -1275,7 +1275,7 @@ impl Trackable for DirectedProto {
 impl DirectedProto {
     pub fn build(self) -> err::Result<DirectedWave> {
         let kind = self.kind.ok_or::<err::Error>(
-            "kind must be set for DirectedProto to create the proper DirectedWave".into(),
+            err!("kind must be set for DirectedProto to create the proper DirectedWave"),
         )?;
 
         let mut core = self.core.clone();
@@ -1307,7 +1307,7 @@ impl DirectedProto {
                     Ripple {
                         to: self.to.ok_or(err!("must set 'to'"))?,
                         core,
-                        bounce_backs: self.bounce_backs.ok_or("BounceBacks must be set")?,
+                        bounce_backs: self.bounce_backs.ok_or(err!("BounceBacks must be set"))?,
                         history: self.history,
                     },
                     self.from.ok_or(err!("must set 'from'"))?,
@@ -1618,8 +1618,8 @@ impl EchoCore {
         }
     }
 
-    pub fn as_result<E: From<&'static str>, P: TryFrom<Substance>>(self) -> Result<P, E> {
-        self.core.as_result()
+    pub fn as_result<P: TryFrom<Substance>>(self) -> err::Result<P> {
+        Ok(self.core.as_result()?)
     }
 }
 
@@ -1643,9 +1643,9 @@ impl EchoCore {
             Ok(self)
         } else {
             if let Substance::Text(error) = self.core.body {
-                Err(error.into())
+                Err(err!(error.to_string()))
             } else {
-                Err(format!("error code: {}", self.core.status.to_string()).into())
+                Err(err!("error code: {}", self.core.status.to_string()))
             }
         }
     }
@@ -1706,7 +1706,7 @@ impl PongCore {
         }
     }
 
-    pub fn as_result<E: From<&'static str>, P: TryFrom<Substance>>(self) -> Result<P, E> {
+    pub fn as_result<P: TryFrom<Substance>>(self) -> err::Result<P> {
         self.core.as_result()
     }
 
@@ -1715,8 +1715,8 @@ impl PongCore {
             Ok(())
         } else {
             if let Substance::FormErrs(errs) = &self.core.body {
-                Err(format!("{} : {}", self.core.status.to_string(), errs.to_string()).into())
-            } else if let Substance::Err(err) = &self.core.body {
+                Err(err!("{} : {}", self.core.status.to_string(), errs.to_string()))
+            } else if let Substance::Text(err) = &self.core.body {
                 Err(err!("{}",err.to_string()))
             } else {
                 Err(err!(self.core.status.to_string()))
@@ -1914,7 +1914,7 @@ impl DirectedWave {
             kind: match self {
                 DirectedWave::Ping(_) => ReflectedKind::Pong,
                 DirectedWave::Ripple(_) => ReflectedKind::Echo,
-                DirectedWave::Signal(_) => return Err("signals do not have a reflected".into()),
+                DirectedWave::Signal(_) => return Err(err!("signals do not have a reflected")),
             },
             to: self.reflect_to().clone(),
             intended: self.to(),
@@ -1926,7 +1926,7 @@ impl DirectedWave {
     pub fn to_signal(self) -> err::Result<WaveVariantDef<SignalCore>> {
         match self {
             DirectedWave::Signal(signal) => Ok(signal),
-            _ => Err("not a signal wave".into()),
+            _ => Err(err!("not a signal wave")),
         }
     }
 
@@ -2042,7 +2042,7 @@ impl SingularDirectedWave {
                 SingularDirectedWave::Ping(_) => ReflectedKind::Pong,
                 SingularDirectedWave::Ripple(_) => ReflectedKind::Echo,
                 SingularDirectedWave::Signal(_) => {
-                    return Err("signals do not have a reflected".into())
+                    return Err(err!("signals do not have a reflected"))
                 }
             },
             to: self.from().clone(),
@@ -2547,7 +2547,7 @@ impl Recipients {
         if let Recipients::Single(rtn) = self {
             Ok(rtn)
         } else {
-            Err("not a single".into())
+            Err(err!("not a single"))
         }
     }
 }
@@ -3254,7 +3254,7 @@ impl<W> Bounce<W> {
             Bounce::Absorbed => Bounce::Absorbed,
             Bounce::Reflected(reflected) => match reflected.try_into() {
                 Ok(reflected) => CoreBounce::Reflected(reflected),
-                Err(err) => CoreBounce::Reflected(err.as_reflected_core()),
+                Err(err) => CoreBounce::Reflected(ReflectedCore::err(err)),
             },
         }
     }

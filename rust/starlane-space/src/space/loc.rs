@@ -12,7 +12,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use starlane_parse::{new_span, Trace, Tw};
 
 use crate::space::err;
-use crate::space::err::ParseErrs;
+use crate::space::err::{err, ParseErrs};
 use crate::space::log::Trackable;
 use crate::space::parse::error::result;
 use crate::space::parse::{
@@ -236,8 +236,9 @@ where
                     Ok(V::from_str(val.as_str())?)
                 }
                 Err(err) => {
-                    let trace = var.trace.clone();
-                    match err {
+                        Err(err!("variable '{}' not found", var.unwrap().to_string()))
+                    //let trace = var.trace.clone();
+/*                    match err {
                         ResolverErr::NotAvailable => Err(ParseErrs::from_range(
                             "variables not available in this context",
                             "variables not available",
@@ -250,7 +251,7 @@ where
                             trace.range,
                             trace.extra,
                         )),
-                    }
+                    }*/
                 }
             },
             VarVal::Val(val) => Ok(val.unwrap()),
