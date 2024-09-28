@@ -83,7 +83,7 @@ pub fn autobox(item: TokenStream) -> TokenStream {
                                     fn try_into(self) -> Result<#ty,Self::Error> {
                                         match self {
                                         Self::#variant_ident(val) => Ok(*val),
-                                        _ => Err(format!("expected {}",#ty_str).into())
+                                        _ => Err(SpaceErr::from_str(format!("expected {}",#ty_str)))
                                         }
                                     }
                                 }
@@ -167,17 +167,17 @@ pub fn to_substance(item: TokenStream) -> TokenStream {
 
                             xforms.push(quote! {
                             impl ToSubstance<#ty> for #ident {
-                                fn to_substance(self) -> Result<#ty,SpaceErr> {
+                                fn to_substance(self) -> anyhow::Result<#ty> {
                                     match self {
                                     Self::#variant_ident(val) => Ok(*val),
-                                    _ => Err(format!("expected {}",#ty_str).into())
+                                    _ => Err(anyhow!("expected {}",#ty_str).into())
                                     }
                                 }
 
-                                fn to_substance_ref(&self) -> Result<&#ty,SpaceErr> {
+                                fn to_substance_ref(&self) -> anyhow::Result<&#ty> {
                                     match self {
                                     Self::#variant_ident(val) => Ok(val.as_ref()),
-                                    _ => Err(format!("expected {}",#ty_str).into())
+                                    _ => Err(anyhow!("expected {}",#ty_str).into())
                                     }
                                 }
                             }
@@ -188,16 +188,16 @@ pub fn to_substance(item: TokenStream) -> TokenStream {
                             let ty_str = ty.to_token_stream().to_string();
                             xforms.push(quote! {
                             impl ToSubstance<#ty> for #ident {
-                                fn to_substance(self) -> Result<#ty,SpaceErr> {
+                                fn to_substance(self) -> anyhow::Result<#ty> {
                                     match self {
                                     Self::#variant_ident(val) => Ok(val),
-                                    _ => Err(format!("expected {}",#ty_str).into())
+                                    _ => Err(anyhow!("expected {}",#ty_str).into())
                                     }
                                 }
-                                 fn to_substance_ref(&self) -> Result<&#ty,SpaceErr> {
+                                 fn to_substance_ref(&self) -> anyhow::Result<&#ty> {
                                     match self {
                                     Self::#variant_ident(val) => Ok(val),
-                                    _ => Err(format!("expected {}",#ty_str).into())
+                                    _ => Err(anyhow!("expected {}",#ty_str).into())
                                     }
                                 }
                             }
@@ -212,16 +212,16 @@ pub fn to_substance(item: TokenStream) -> TokenStream {
             } else {
                 xforms.push(quote! {
                 impl ToSubstance<()> for #ident {
-                    fn to_substance(self) -> Result<(),SpaceErr> {
+                    fn to_substance(self) -> anyhow::Result<()> {
                         match self {
                         Self::#variant_ident => Ok(()),
-                        _ => Err(format!("expected Empty").into())
+                        _ => Err(anyhow!("expected Empty").into())
                         }
                     }
-                     fn to_substance_ref(&self) -> Result<&(),SpaceErr> {
+                     fn to_substance_ref(&self) -> anyhow::Result<&()> {
                         match self {
                         Self::#variant_ident => Ok(&()),
-                        _ => Err(format!("expected Empty").into())
+                        _ => Err(anyhow!("expected Empty").into())
                         }
                     }
                 }
@@ -256,7 +256,7 @@ pub fn mech_err(item: TokenStream) -> TokenStream {
     let rtn = quote! {
 
         impl MechErr for #ident {
-            fn to_uni_err(self) -> starlane_space::err::SpaceErr {
+            fn to_uni_err(self) -> starlane_space::err::anyhowSpaceErr {
                starlane_space::err::SpaceErr::server_error(self.to_string())
             }
         }

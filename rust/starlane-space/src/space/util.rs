@@ -429,11 +429,11 @@ where
     fn to_resolved(self, env: &Env) -> anyhow::Result<R>;
 }
 
-pub fn log<R>(result: anyhow::anyhow::Result<R>) -> Result<R> {
+pub fn log<R,E>(result: Result<R,E>) -> Result<R,E> {
     match result {
         Ok(r) => Ok(r),
         Err(err) => {
-            err.print();
+         //   err.print();
             Err(err)
         }
     }

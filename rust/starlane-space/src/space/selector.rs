@@ -1,7 +1,7 @@
 use core::fmt::Formatter;
 use core::str::FromStr;
 use std::ops::Deref;
-
+use anyhow::anyhow;
 use nom::combinator::all_consuming;
 use serde::de::{Error, Visitor};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -79,7 +79,7 @@ impl KindSelector {
 
     pub fn as_point_segments(&self) -> anyhow::Result<String> {
         match &self.base {
-            KindBaseSelector::Any => Err(err(
+            KindBaseSelector::Any => Err(anyhow!(
                 "cannot turn a base wildcard kind into point segments",
             )),
             KindBaseSelector::Exact(e) => Ok(e.to_skewer().to_string()),

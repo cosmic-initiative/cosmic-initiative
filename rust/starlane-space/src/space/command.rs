@@ -25,7 +25,7 @@ pub mod common {
     use std::collections::HashMap;
     use std::convert::{TryFrom, TryInto};
     use std::ops::{Deref, DerefMut};
-
+    use anyhow::anyhow;
     use serde::{Deserialize, Serialize};
 
     use crate::space::err::SpaceErr;
@@ -56,7 +56,7 @@ pub mod common {
 
         pub fn get_substance(&self) -> anyhow::Result<Substance> {
             match self {
-                StateSrc::None => Err(err("state has no substance")),
+                StateSrc::None => Err(anyhow!("state has no substance")),
                 StateSrc::Substance(substance) => Ok(*substance.clone()),
             }
         }
@@ -361,7 +361,7 @@ pub mod direct {
         use std::convert::TryInto;
         use std::sync::atomic::{AtomicU64, Ordering};
         use std::sync::Arc;
-
+        use anyhow::{anyhow, Context};
         use serde::{Deserialize, Serialize};
 
         use crate::space::command::common::{SetProperties, StateSrc, StateSrcVar};
@@ -475,7 +475,7 @@ pub mod direct {
 
             fn try_into(self) -> Result<KindParts, Self::Error> {
                 if self.specific.is_some() {
-                    return Err("cannot create a ResourceKind from a specific pattern when using KindTemplate".into());
+                    return Err(SpaceErr::String("cannot create a ResourceKind from a specific pattern when using KindTemplate".to_string()));
                 }
                 Ok(KindParts {
                     base: self.base,
@@ -510,46 +510,18 @@ pub mod direct {
 
         impl ToResolved<CreateCtx> for CreateVar {
             fn to_resolved(self, env: &Env) -> anyhow::Result<CreateCtx> {
+
+                fn file(env: &Env, name: &String ) -> anyhow::Result<StateSrc> {
+                    Ok(StateSrc::Substance(Box::new(Substance::Bin(env.file(name).context(format!("accessing file '{}'",name ))?.content))))
+                }
+
                 let template = self.template.to_resolved(env)?;
                 let state = match &self.state {
                     StateSrcVar::None => StateSrc::None,
-                    StateSrcVar::FileRef(name) => StateSrc::Substance(Box::new(Substance::Bin(
-                        env.file(name)
-                            .map_err(|e| match e {
-                                ResolverErr::NotAvailable => err(
-                                    "files are not available in this context",
-                                ),
-                                ResolverErr::NotFound => {
-                                    err(format!("cannot find file '{}'", name))
-                                }
-                            })?
-                            .content,
-                    ))),
-                    StateSrcVar::Var(var) => {
-                        let val = env.val(var.name.as_str()).map_err(|e| match e {
-                            ResolverErr::NotAvailable => {
-                                err("variable are not available in this context")
-                            }
-                            ResolverErr::NotFound => err(format!(
-                                "cannot find variable '{}'",
-                                var.name
-                            )),
-                        })?;
-                        StateSrc::Substance(Box::new(Substance::Bin(
-                            env.file(val.clone())
-                                .map_err(|e| match e {
-                                    ResolverErr::NotAvailable => err(
-                                        "files are not available in this context",
-                                    ),
-                                    ResolverErr::NotFound => err(format!(
-                                        "cannot find file '{}'",
-                                        val.to_text().unwrap_or("err".to_string())
-                                    )),
-                                })?
-                                .content,
-                        )))
-                    }
+                    StateSrcVar::FileRef(name) => file(env, name)?,
+                    StateSrcVar::Var(var) => StateSrc::Substance(Box::new(env.val(var.name.as_str()).context(format!("accessing var '{}'", var.name))?))
                 };
+
                 Ok(CreateCtx {
                     template,
                     properties: self.properties,
@@ -798,7 +770,7 @@ pub mod direct {
                         hierarchy,
                     })
                 } else {
-                    Err("Not of kind SubSelector".into())
+                    Err(SpaceErr::from_str("Not of kind SubSelector"))
                 }
             }
         }
@@ -992,7 +964,7 @@ pub mod direct {
         impl TryInto<PointHierarchy> for QueryResult {
             type Error = SpaceErr;
 
-            fn try_into(self) -> anyhow::Result<PointHierarchy> {
+            fn try_into(self) -> Result<PointHierarchy,Self::Error> {
                 match self {
                     QueryResult::PointHierarchy(hierarchy) => Ok(hierarchy),
                 }

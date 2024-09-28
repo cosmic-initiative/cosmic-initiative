@@ -26,6 +26,8 @@ mod tests {
 
 pub trait Span:
     Clone
++ Send
++ Sync
     + ToString
     + AsBytes
     + Slice<Range<usize>>

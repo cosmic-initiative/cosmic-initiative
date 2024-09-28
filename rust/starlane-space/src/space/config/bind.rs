@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-
+use anyhow::anyhow;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -43,7 +43,7 @@ impl BindConfig {
         scopes
     }
 
-    pub fn select(&self, directed: &DirectedWave) -> Result<&MethodScope, SpaceErr> {
+    pub fn select(&self, directed: &DirectedWave) -> anyhow::Result<&MethodScope> {
         for route_scope in self.route_scopes() {
             if route_scope.selector.is_match(directed).is_ok() {
                 for message_scope in &route_scope.block {
@@ -57,22 +57,19 @@ impl BindConfig {
                 }
             }
         }
-        Err(SpaceErr::Status {
-            status: 404,
-            message: format!(
+        Err(anyhow!(
                 "no route matches {}<{}>{}",
                 directed.kind().to_string(),
                 directed.core().method.to_string(),
                 directed.core().uri.path().to_string()
-            ),
-        })
+            ))
     }
 }
 
 impl TryFrom<Vec<u8>> for BindConfig {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
-    fn try_from(doc: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(doc: Vec<u8>) -> anyhow::Result<Self> {
         let doc = String::from_utf8(doc)?;
         bind_config(doc.as_str())
     }
@@ -147,7 +144,7 @@ impl<Pnt> PipelineStepDef<Pnt> {
 }
 
 impl ToResolved<PipelineStep> for PipelineStepCtx {
-    fn to_resolved(self, env: &Env) -> Result<PipelineStep, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStep> {
         let mut blocks = vec![];
         for block in self.blocks {
             blocks.push(block.to_resolved(env)?);
@@ -162,7 +159,7 @@ impl ToResolved<PipelineStep> for PipelineStepCtx {
 }
 
 impl ToResolved<PipelineStepCtx> for PipelineStepVar {
-    fn to_resolved(self, env: &Env) -> Result<PipelineStepCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStepCtx> {
         let mut blocks = vec![];
         for block in self.blocks {
             blocks.push(block.to_resolved(env)?);
@@ -202,14 +199,14 @@ pub enum PipelineStopDef<Pnt> {
 }
 
 impl ToResolved<PipelineStop> for PipelineStopVar {
-    fn to_resolved(self, env: &Env) -> Result<PipelineStop, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStop> {
         let stop: PipelineStopCtx = self.to_resolved(env)?;
         stop.to_resolved(env)
     }
 }
 
 impl ToResolved<PipelineStop> for PipelineStopCtx {
-    fn to_resolved(self, env: &Env) -> Result<PipelineStop, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStop> {
         Ok(match self {
             PipelineStopCtx::Core => PipelineStop::Core,
             PipelineStopCtx::Call(call) => PipelineStop::Call(call.to_resolved(env)?),
@@ -221,7 +218,7 @@ impl ToResolved<PipelineStop> for PipelineStopCtx {
 }
 
 impl ToResolved<PipelineStopCtx> for PipelineStopVar {
-    fn to_resolved(self, env: &Env) -> Result<PipelineStopCtx, SpaceErr> {
+    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStopCtx> {
         Ok(match self {
             PipelineStopVar::Core => PipelineStopCtx::Core,
             PipelineStopVar::Call(call) => PipelineStopCtx::Call(call.to_resolved(env)?),
@@ -299,7 +296,7 @@ impl RouteSelector {
         }
     }
 
-    pub fn is_match<'a>(&self, wave: &'a DirectedWave) -> Result<(), ()> {
+    pub fn is_match<'a>(&self, wave: &'a DirectedWave) -> Result<(),()> {
         self.method.is_match(&wave.core().method)?;
         Ok(())
         /*        match self.path.is_match(&wave.core().uri.path()) {

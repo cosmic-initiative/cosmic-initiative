@@ -34,11 +34,11 @@ impl<S> ToSubstance<S> for ReflectedCore
 where
     Substance: ToSubstance<S>,
 {
-    fn to_substance(self) -> Result<S, SpaceErr> {
+    fn to_substance(self) -> anyhow::Result<S> {
         self.body.to_substance()
     }
 
-    fn to_substance_ref(&self) -> Result<&S, SpaceErr> {
+    fn to_substance_ref(&self) -> anyhow::Result<&S> {
         self.body.to_substance_ref()
     }
 }
@@ -69,12 +69,12 @@ impl ReflectedCore {
         }
     }
 
-    pub fn result(result: Result<ReflectedCore, SpaceErr>) -> ReflectedCore {
+    pub fn result<E:ToString>(result: Result<ReflectedCore,E> ) ->  ReflectedCore {
         match result {
             Ok(core) => core,
             Err(err) => {
                 let mut core = ReflectedCore::status(err.status());
-                core.body = Substance::FormErrs(FormErrs::from(err));
+                core.body = Substance::Text(err.to_string());
                 core
             }
         }
@@ -187,7 +187,7 @@ impl ReflectedCore {
 }
 
 impl ReflectedCore {
-    pub fn as_result<E: From<&'static str>, P: TryFrom<Substance>>(self) -> Result<P, E> {
+    pub fn as_result<E: From<&'static str>, P: TryFrom<Substance>>(self) -> anyhow::Result<P> {
         if self.status.is_success() {
             match P::try_from(self.body) {
                 Ok(substance) => Ok(substance),
@@ -198,7 +198,7 @@ impl ReflectedCore {
         }
     }
 
-    pub fn ok_or(&self) -> Result<(), SpaceErr> {
+    pub fn ok_or(&self) -> anyhow::Result<()> {
         if self.is_ok() {
             Ok(())
         } else if let Substance::Err(err) = &self.body {
@@ -213,7 +213,7 @@ impl ReflectedCore {
 impl TryInto<http::response::Builder> for ReflectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> Result<http::response::Builder, Self::Error> {
+    fn try_into(self) -> anyhow::Result<http::response::Builder> {
         let mut builder = http::response::Builder::new();
 
         for (name, value) in self.headers {
@@ -232,7 +232,7 @@ impl TryInto<http::response::Builder> for ReflectedCore {
 impl TryInto<http::Response<Bin>> for ReflectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> Result<http::Response<Bin>, Self::Error> {
+    fn try_into(self) -> anyhow::Result<http::Response<Bin>> {
         let mut builder = http::response::Builder::new();
 
         for (name, value) in self.headers {
@@ -298,7 +298,7 @@ impl ToString for MethodPattern {
 }
 
 impl ValueMatcher<Method> for MethodPattern {
-    fn is_match(&self, x: &Method) -> Result<(), ()> {
+    fn is_match(&self, x: &Method) -> Result<(),()> {
         match self {
             MethodPattern::Hyp(pattern) => {
                 if let Method::Hyp(v) = x {
@@ -333,7 +333,7 @@ impl ValueMatcher<Method> for MethodPattern {
 }
 
 impl ValueMatcher<Method> for Method {
-    fn is_match(&self, x: &Method) -> Result<(), ()> {
+    fn is_match(&self, x: &Method) -> Result<(),()> {
         if x == self {
             Ok(())
         } else {
@@ -387,11 +387,11 @@ impl<S> ToSubstance<S> for DirectedCore
 where
     Substance: ToSubstance<S>,
 {
-    fn to_substance(self) -> Result<S, SpaceErr> {
+    fn to_substance(self) -> anyhow::Result<S> {
         self.body.to_substance()
     }
 
-    fn to_substance_ref(&self) -> Result<&S, SpaceErr> {
+    fn to_substance_ref(&self) -> anyhow::Result<&S> {
         self.body.to_substance_ref()
     }
 }
@@ -437,7 +437,7 @@ impl DirectedCore {
 impl TryFrom<PingCore> for DirectedCore {
     type Error = SpaceErr;
 
-    fn try_from(request: PingCore) -> Result<Self, Self::Error> {
+    fn try_from(request: PingCore) -> Result<Self,Self::Error> {
         Ok(request.core)
     }
 }
@@ -462,7 +462,7 @@ impl Into<DirectedCore> for Command {
 impl TryFrom<http::Request<Bin>> for DirectedCore {
     type Error = UniErr;
 
-    fn try_from(request: http::Request<Bin>) -> Result<Self, Self::Error> {
+    fn try_from(request: http::Request<Bin>) -> anyhow::Result<Self> {
         Ok(Self {
             headers: request.headers().clone(),
             method: Method::Http(request.method().clone().try_into()?),
@@ -475,7 +475,7 @@ impl TryFrom<http::Request<Bin>> for DirectedCore {
 impl TryInto<http::Request<Bin>> for DirectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> Result<http::Request<Bin>, UniErr> {
+    fn try_into(self) -> anyhow::Result<http::Request<Bin>> {
         let mut builder = http::Request::builder();
         for (name, value) in self.headers {
             match name {
@@ -624,7 +624,7 @@ impl Into<ReflectedCore> for Surface {
 impl TryFrom<ReflectedCore> for Surface {
     type Error = SpaceErr;
 
-    fn try_from(core: ReflectedCore) -> Result<Self, Self::Error> {
+    fn try_from(core: ReflectedCore) -> Result<Self,SpaceErr> {
         if !core.status.is_success() {
             Err(SpaceErr::new(core.status.as_u16(), "error"))
         } else {
@@ -660,7 +660,7 @@ pub enum MethodKind {
 }
 
 impl ValueMatcher<MethodKind> for MethodKind {
-    fn is_match(&self, x: &MethodKind) -> Result<(), ()> {
+    fn is_match(&self, x: &MethodKind) -> Result<(),()> {
         if self == x {
             Ok(())
         } else {

@@ -80,44 +80,7 @@ impl CoreReflector for ThisErr {
     }
 }
 
-impl ThisErr{
 
-    pub fn str<S: ToString>(s: S) -> ThisErr {
-        ThisErr::new(500, s)
-    }
-
-    pub fn map<S>(s: S) -> Self
-    where
-        S: ToString,
-    {
-        ThisErr::new(500u16, s)
-    }
-
-    pub fn from_status(status: u16) -> ThisErr {
-        let message = match status {
-            400 => "Bad Request".to_string(),
-            404 => "Not Found".to_string(),
-            403 => "Forbidden".to_string(),
-            408 => "Timeout".to_string(),
-            500 => "Internal Server Error".to_string(),
-            status => format!("{} Error", status),
-        };
-        ThisErr::Status { status, message }
-    }
-    fn status(&self) -> u16 {
-        match self {
-            SpaceErr::Status { status, .. } => status.clone(),
-            SpaceErr::ParseErrs(_) => 500u16,
-        }
-    }
-
-    fn message(&self) -> String {
-        match self {
-            SpaceErr::Status { status, message } => message.clone(),
-            SpaceErr::ParseErrs(_) => "Error report".to_string(),
-        }
-    }
-}
 
 
 

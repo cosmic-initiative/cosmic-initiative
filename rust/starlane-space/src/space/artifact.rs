@@ -33,8 +33,8 @@ where
 }
 
 impl<A> ArtRef<A> {
-    pub fn bundle(&self) -> Point {
-        self.point.clone().to_bundle().extract_context()
+    pub fn bundle(&self) -> anyhow::Result<Point> {
+        self.point.clone().to_bundle()
     }
     pub fn point(&self) -> &Point {
         &self.point

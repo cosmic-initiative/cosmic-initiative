@@ -18,7 +18,7 @@ use crate::space::thiserr::err;
 
 pub trait ExchangeRouter: Send + Sync {
     fn route(&self, wave: Wave);
-    fn exchange(&self, direct: DirectedWave) -> Result<ReflectedAggregate, SpaceErr>;
+    fn exchange(&self, direct: DirectedWave) -> anyhow::Result<ReflectedAggregate>;
 }
 
 #[derive(Clone)]
@@ -37,7 +37,7 @@ impl ExchangeRouter for SyncRouter {
         self.router.route(wave)
     }
 
-    fn exchange(&self, direct: DirectedWave) -> Result<ReflectedAggregate, SpaceErr> {
+    fn exchange(&self, direct: DirectedWave) -> anyhow::Result<ReflectedAggregate> {
         self.router.exchange(direct)
     }
 }
@@ -60,7 +60,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub fn direct<D, W>(&self, wave: D) -> Result<W, SpaceErr>
+    pub fn direct<D, W>(&self, wave: D) -> anyhow::Result<W>
     where
         W: FromReflectedAggregate,
         D: Into<DirectedProto>,
@@ -81,7 +81,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub fn ping<D>(&self, ping: D) -> Result<WaveVariantDef<PongCore>, SpaceErr>
+    pub fn ping<D>(&self, ping: D) -> anyhow::Result<WaveVariantDef<PongCore>>
     where
         D: Into<DirectedProto>,
     {
@@ -89,7 +89,7 @@ impl ProtoTransmitter {
         let mut ping: DirectedProto = ping.into();
         ping.bounce_backs = Some(BounceBacks::Single);
         if let Some(DirectedKind::Ping) = ping.kind {
-            sel.direct(ping)
+            self.direct(ping)
         } else {
             Err(err("expected DirectedKind::Ping"))?
         }
@@ -107,7 +107,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub fn signal<D>(&self, signal: D) -> Result<()>
+    pub fn signal<D>(&self, signal: D) -> anyhow::Result<()>
     where
         D: Into<DirectedProto>,
     {
@@ -115,7 +115,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Signal) = signal.kind {
             self.direct(signal)
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(anyhow!("expected DirectedKind::Ping"))
         }
     }
 
@@ -144,7 +144,7 @@ impl ProtoTransmitter {
         self.router.route(wave)
     }
 
-    pub fn reflect<W>(&self, wave: W) -> Result<(), SpaceErr>
+    pub fn reflect<W>(&self, wave: W) -> anyhow::Result<()>
     where
         W: Into<ReflectedProto>,
     {
@@ -197,7 +197,7 @@ impl<'a, I> InCtx<'a, I> {
 }
 
 pub trait DirectedHandlerSelector {
-    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> Result<&dyn DirectedHandler, ()>;
+    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> anyhow::Result<&dyn DirectedHandler>;
 }
 
 pub trait DirectedHandler: Send + Sync {
@@ -259,7 +259,7 @@ impl DirectedHandlerShell {
 }
 
 impl RootInCtx {
-    pub fn push<'a, I>(&self) -> Result<InCtx<I>, SpaceErr>
+    pub fn push<'a, I>(&self) -> anyhow::Result<InCtx<I>>
     where
         Substance: ToSubstance<I>,
     {

@@ -2,7 +2,7 @@ use ::core::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::ops;
 use std::ops::{Deref, DerefMut};
-
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use crate::space::command::RawCommand;
@@ -246,6 +246,7 @@ where
     }
 }
 
+
 impl Wave {
     pub fn can_shard(&self) -> bool {
         match self {
@@ -260,7 +261,7 @@ impl Wave {
             Wave::Pong(pong) => Ok(SingularWave::Pong(pong)),
             Wave::Echo(echo) => Ok(SingularWave::Echo(echo)),
             Wave::Signal(signal) => Ok(SingularWave::Signal(signal)),
-            Wave::Ripple(_) => Err(err(
+            Wave::Ripple(_) => Err(anyhow!(
                 "cannot change Ripple into a singular",
             )),
         }
@@ -2128,7 +2129,7 @@ where
                 ripple.bounce_backs = bounce_backs;
                 Ok(())
             }
-            _ => Err(err(
+            _ => Err(anyhow!(
                 "can only set bouncebacks for Ripple",
             )),
         }
@@ -2440,7 +2441,7 @@ impl Recipients {
     pub fn to_single(self) -> anyhow::Result<Surface> {
         match self {
             Recipients::Single(surface) => Ok(surface),
-            _ => Err(err(
+            _ => Err(anyhow!(
                 "cannot convert a multiple recipient into a single",
             )),
         }
@@ -2710,14 +2711,14 @@ impl WaveVariantDef<SignalCore> {
 
     pub fn unwrap_from_hop(self) -> anyhow::Result<WaveVariantDef<SignalCore>> {
         if self.method != Method::Hyp(HypMethod::Hop) {
-            return Err(err(
+            return Err(anyhow!(
                 "expected signal wave to have method Hop",
             ));
         }
         if let Substance::Wave(wave) = &self.body {
             Ok((*wave.clone()).to_signal()?)
         } else {
-            Err(err(
+            Err(anyhow!(
                 "expected body substance to be of type Wave for a transport signal",
             ))
         }
@@ -2725,14 +2726,14 @@ impl WaveVariantDef<SignalCore> {
 
     pub fn unwrap_from_transport(self) -> anyhow::Result<Wave> {
         if self.method != Method::Hyp(HypMethod::Transport) {
-            return Err(err(
+            return Err(anyhow!(
                 "expected signal wave to have method Transport",
             ));
         }
         if let Substance::Wave(wave) = &self.body {
             Ok(*wave.clone())
         } else {
-            Err(err(
+            Err(anyhow!(
                 "expected body substance to be of type Wave for a transport signal",
             ))
         }

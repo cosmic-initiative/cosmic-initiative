@@ -4,6 +4,7 @@ use crate::space::point::Point;
 use crate::{Bin, BindConfig, SpaceErr, Stub};
 use dashmap::DashMap;
 use std::sync::Arc;
+use anyhow::anyhow;
 
 #[derive(Clone)]
 pub struct ArtifactApi {
@@ -23,7 +24,7 @@ impl ArtifactApi {
         }
     }
 
-    pub fn mechtron(&self, point: &Point) -> Result<ArtRef<MechtronConfig>, SpaceErr> {
+    pub fn mechtron(&self, point: &Point) -> anyhow::Result<ArtRef<MechtronConfig>> {
         {
             if self.mechtrons.contains_key(point) {
                 let mechtron = self.mechtrons.get(point).unwrap().clone();
@@ -36,7 +37,7 @@ impl ArtifactApi {
         return Ok(ArtRef::new(mechtron, point.clone()));
     }
 
-    pub fn bind(&self, point: &Point) -> Result<ArtRef<BindConfig>, SpaceErr> {
+    pub fn bind(&self, point: &Point) -> anyhow::Result<ArtRef<BindConfig>> {
         {
             if self.binds.contains_key(point) {
                 let bind = self.binds.get(point).unwrap().clone();
@@ -51,7 +52,7 @@ impl ArtifactApi {
         return Ok(ArtRef::new(bind, point.clone()));
     }
 
-    pub fn raw(&self, point: &Point) -> Result<ArtRef<Vec<u8>>, SpaceErr> {
+    pub fn raw(&self, point: &Point) -> anyhow::Result<ArtRef<Vec<u8>>> {
         if self.binds.contains_key(point) {
             let bin = self.raw.get(point).unwrap().clone();
             return Ok(ArtRef::new(bin, point.clone()));
@@ -64,12 +65,12 @@ impl ArtifactApi {
         return Ok(ArtRef::new(bin, point.clone()));
     }
 
-    fn fetch<A>(&self, point: &Point) -> Result<A, SpaceErr>
+    fn fetch<A>(&self, point: &Point) -> anyhow::Result<A>
     where
-        A: TryFrom<Bin, Error = SpaceErr>,
+        A: TryFrom<Bin, Error = anyhow::Error>,
     {
         if !point.has_bundle() {
-            return Err("point is not from a bundle".into());
+            return Err(anyhow!("point is not from a bundle"));
         }
         let bin = self.fetcher.fetch(point)?;
         Ok(A::try_from(bin)?)
@@ -77,6 +78,6 @@ impl ArtifactApi {
 }
 #[async_trait]
 pub trait ArtifactFetcher: Send + Sync {
-    fn stub(&self, point: &Point) -> Result<Stub, SpaceErr>;
-    fn fetch(&self, point: &Point) -> Result<Bin, SpaceErr>;
+    fn stub(&self, point: &Point) -> anyhow::Result<Stub>;
+    fn fetch(&self, point: &Point) -> anyhow::Result<Bin>;
 }

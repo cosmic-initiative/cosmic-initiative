@@ -3,7 +3,7 @@ pub mod synch;
 
 use alloc::borrow::Cow;
 use std::ops::Deref;
-
+use anyhow::anyhow;
 use asynch::{
     DirectedHandler, Router,
 };
@@ -328,9 +328,9 @@ impl<R, E> ProtoTransmitterDef<R, E> {
     pub fn from_topic(&mut self, topic: Topic) -> Result<(), SpaceErr> {
         self.from = match self.from.clone() {
             SetStrategy::None => {
-                return Err(err(
+                return Err(anyhow!(
                     "cannot set Topic without first setting Surface",
-                ));
+                ).chain());
             }
             SetStrategy::Fill(from) => SetStrategy::Fill(from.with_topic(topic)),
             SetStrategy::Override(from) => SetStrategy::Override(from.with_topic(topic)),

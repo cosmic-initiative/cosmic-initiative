@@ -8,7 +8,7 @@ use std::fmt::Formatter;
 use std::ops::{Deref, Range, RangeFrom, RangeTo};
 use std::str::FromStr;
 use std::sync::Arc;
-
+use anyhow::anyhow;
 //use ariadne::{Label, Report, ReportKind};
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, is_not};
@@ -32,7 +32,7 @@ use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::ExtractContext;
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
+use thiserror::Error;
 use starlane_parse::{new_span, span_with_extra, Trace};
 use starlane_parse::{trim, tw, Res, Span};
 
@@ -53,7 +53,7 @@ use crate::space::config::bind::{
 use crate::space::config::mechtron::MechtronConfig;
 use crate::space::config::Document;
 use crate::space::err::report::{Label, Report, ReportKind};
-use crate::space::err::{ParseErrs, SpaceErr};
+use crate::space::err::{ParseErrs};
 use crate::space::kind::{
     ArtifactSubKind, BaseKind, DatabaseSubKind, FileSubKind, Kind, KindParts, NativeSub, Specific,
     StarSub, UserBaseSubKind,
@@ -108,7 +108,7 @@ impl Parser {
         point_subst(input)
     }
 
-    pub fn consume_point(input: Span) -> Result<Point, ExtErr> {
+    pub fn consume_point(input: Span) -> anyhow::Result<Point> {
         let (_, point) = all_consuming(point_subst)(input)?;
         Ok(point)
     }
@@ -1167,15 +1167,15 @@ impl CamelCase {
 }
 
 impl FromStr for CamelCase {
-    type Err = SpaceErr;
+    type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         result(all_consuming(camel_case)(new_span(s)))
     }
 }
 
 impl Serialize for CamelCase {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok,S::Error>
     where
         S: Serializer,
     {
@@ -1184,7 +1184,7 @@ impl Serialize for CamelCase {
 }
 
 impl<'de> Deserialize<'de> for CamelCase {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self,D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1218,7 +1218,7 @@ pub struct Domain {
 }
 
 impl Serialize for Domain {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok,S::Error>
     where
         S: Serializer,
     {
@@ -1227,7 +1227,7 @@ impl Serialize for Domain {
 }
 
 impl<'de> Deserialize<'de> for Domain {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self,D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1242,9 +1242,9 @@ impl<'de> Deserialize<'de> for Domain {
 }
 
 impl FromStr for Domain {
-    type Err = SpaceErr;
+    type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         result(all_consuming(domain)(new_span(s)))
     }
 }
@@ -1269,7 +1269,7 @@ pub struct SkewerCase {
 }
 
 impl Serialize for SkewerCase {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok,S::Error>
     where
         S: Serializer,
     {
@@ -1278,7 +1278,7 @@ impl Serialize for SkewerCase {
 }
 
 impl<'de> Deserialize<'de> for SkewerCase {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self,D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -1293,9 +1293,9 @@ impl<'de> Deserialize<'de> for SkewerCase {
 }
 
 impl FromStr for SkewerCase {
-    type Err = SpaceErr;
+    type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         result(all_consuming(skewer_case)(new_span(s)))
     }
 }
@@ -1869,25 +1869,25 @@ impl FileResolver {
         }
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> Result<File, ResolverErr> {
+    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
         if let Some(content) = self.files.get(&name.to_string()) {
             Ok(File::new(name, content.clone()))
         } else {
-            Err(ResolverErr::NotFound)
+            Err(ResolverErr::NotFound.into())
         }
     }
 
     /// grab the only file
-    pub fn singleton(&self) -> Result<File, ResolverErr> {
+    pub fn singleton(&self) -> anyhow::Result<File> {
         if self.files.len() == 1 {
             let i = &mut self.files.iter();
             if let Some((name, content)) = i.next() {
                 Ok(File::new(name.clone(), content.clone()))
             } else {
-                Err(ResolverErr::NotFound)
+                Err(ResolverErr::NotFound.into())
             }
         } else {
-            Err(ResolverErr::NotFound)
+            Err(ResolverErr::NotFound.into())
         }
     }
 }
@@ -1947,14 +1947,14 @@ impl Env {
     pub fn pop(self) -> anyhow::Result<Env> {
         Ok(*self
             .parent
-            .ok_or::<SpaceErr>("expected parent scopedVars".into())?)
+            .ok_or::<anyhow::Error>(anyhow!("expected parent scopedVars"))?)
     }
 
     pub fn add_var_resolver(&mut self, var_resolver: Arc<dyn VarResolver>) {
         self.var_resolvers.push(var_resolver);
     }
 
-    pub fn val<K: ToString>(&self, var: K) -> Result<Substance, ResolverErr> {
+    pub fn val<K: ToString>(&self, var: K) -> anyhow::Result<Substance> {
         match self.vars.get(&var.to_string()) {
             None => {
                 if let Ok(val) = self.var_resolvers.val(var.to_string().as_str()) {
@@ -1962,7 +1962,7 @@ impl Env {
                 } else if let Some(parent) = self.parent.as_ref() {
                     parent.val(var.to_string())
                 } else {
-                    Err(ResolverErr::NotFound)
+                    Err(ResolverErr::NotFound.into())
                 }
             }
             Some(val) => Ok(val.clone()),
@@ -1986,13 +1986,13 @@ impl Env {
         self.vars.insert(key.to_string(), value);
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> Result<File, ResolverErr> {
+    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
         match self.file_resolver.files.get(&name.to_string()) {
             None => {
                 if let Some(parent) = self.parent.as_ref() {
                     parent.file(name.to_string())
                 } else {
-                    Err(ResolverErr::NotFound)
+                    Err(ResolverErr::NotFound.into())
                 }
             }
             Some(bin) => Ok(File::new(name.to_string(), bin.clone())),
@@ -2063,15 +2063,15 @@ impl Env {
         }
     }
 
-    pub fn point_or(&self) -> Result<&Point, ExtErr> {
+    pub fn point_or(&self) -> anyhow::Result<&Point> {
         self.point
             .as_ref()
-            .ok_or("cannot reference working point in this context".into())
+            .ok_or(anyhow!("cannot reference working point in this context"))
     }
 
-    pub fn val(&self, var: &str) -> Result<String, ResolverErr> {
+    pub fn val(&self, var: &str) -> anyhow::Result<String> {
         if let None = self.var_resolver {
-            Err(ResolverErr::NotAvailable)
+            Err(ResolverErr::NotAvailable.into())
         } else {
             self.var_resolver.as_ref().unwrap().val(var)
         }
@@ -2094,9 +2094,9 @@ impl Env {
         }
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> Result<File, ResolverErr> {
+    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
         match &self.file_resolver {
-            None => Err(ResolverErr::NotAvailable),
+            None => Err(ResolverErr::NotAvailable.into()),
             Some(file_resolver) => file_resolver.file(name),
         }
     }
@@ -2142,7 +2142,7 @@ impl CompositeResolver {
 }
 
 impl VarResolver for CompositeResolver {
-    fn val(&self, var: &str) -> Result<Substance, ResolverErr> {
+    fn val(&self, var: &str) -> anyhow::Result<Substance> {
         if let Ok(val) = self.scope_resolver.val(var) {
             Ok(val)
         } else if let Ok(val) = self.scope_resolver.val(var) {
@@ -2150,7 +2150,7 @@ impl VarResolver for CompositeResolver {
         } else if let Ok(val) = self.other_resolver.val(var) {
             Ok(val)
         } else {
-            Err(ResolverErr::NotFound)
+            Err(ResolverErr::NotFound.into())
         }
     }
 }
@@ -2167,14 +2167,15 @@ impl CtxResolver for PointCtxResolver {
     }
 }
 
+#[derive(Error,Debug,strum_macros::Display)]
 pub enum ResolverErr {
     NotAvailable,
     NotFound,
 }
 
 pub trait VarResolver: Send + Sync {
-    fn val(&self, var: &str) -> Result<Substance, ResolverErr> {
-        Err(ResolverErr::NotFound)
+    fn val(&self, var: &str) -> anyhow::Result<Substance> {
+        Err(ResolverErr::NotFound.into())
     }
 }
 
@@ -2207,11 +2208,11 @@ impl MapResolver {
 }
 
 impl VarResolver for MapResolver {
-    fn val(&self, var: &str) -> Result<Substance, ResolverErr> {
+    fn val(&self, var: &str) -> anyhow::Result<Substance> {
         self.map
             .get(&var.to_string())
             .cloned()
-            .ok_or(ResolverErr::NotFound)
+            .ok_or(ResolverErr::NotFound.into())
     }
 }
 
@@ -2223,19 +2224,19 @@ pub struct RegexCapturesResolver {
 
 impl RegexCapturesResolver {
     pub fn new(regex: Regex, text: String) -> anyhow::Result<Self> {
-        regex.captures(text.as_str()).ok_or("no regex captures")?;
+        regex.captures(text.as_str()).ok_or(anyhow!("no regex captures"))?;
         Ok(Self { regex, text })
     }
 }
 
 impl VarResolver for RegexCapturesResolver {
-    fn val(&self, id: &str) -> Result<Substance, ResolverErr> {
+    fn val(&self, id: &str) -> anyhow::Result<Substance> {
         let captures = self
             .regex
             .captures(self.text.as_str())
             .expect("expected captures");
         match captures.name(id) {
-            None => Err(ResolverErr::NotFound),
+            None => Err(ResolverErr::NotFound.into()),
             Some(m) => Ok(Substance::Text(m.as_str().to_string())),
         }
     }
@@ -2261,14 +2262,14 @@ impl MultiVarResolver {
 }
 
 impl VarResolver for MultiVarResolver {
-    fn val(&self, var: &str) -> Result<Substance, ResolverErr> {
+    fn val(&self, var: &str) -> anyhow::Result<Substance> {
         for resolver in &self.0 {
             match resolver.val(&var.to_string()) {
                 Ok(ok) => return Ok(ok),
                 Err(_) => {}
             }
         }
-        Err(ResolverErr::NotFound)
+        Err(ResolverErr::NotFound.into())
     }
 }
 
@@ -2277,7 +2278,7 @@ pub trait BruteResolver<Resolved>
 where
     Self: Sized + ToResolved<Resolved>,
 {
-    fn brute_resolve(self) -> Result<Resolved, ExtErr> {
+    fn brute_resolve(self) -> anyhow::Result<Resolved> {
         let resolver = NoResolver::new().wrap();
         Ok(self.to_resolved(&resolver)?)
     }
@@ -2530,7 +2531,7 @@ where
     <I as InputTakeAtPosition>::Item: AsChar,
     F: nom::Parser<I, O, E>,
     E: nom::error::ContextError<I>,
-    O: Clone + FromStr<Err = SpaceErr>,
+    O: Clone + FromStr<Err = anyhow::Error>,
 {
     move |input: I| {
         let (next, element) = f.parse(input.clone())?;
@@ -2980,7 +2981,7 @@ where
 pub fn lex_hierarchy_scope<'a>(
     scope: LexScope<Span<'a>>,
     max_depth: usize,
-) -> Result<LexHierarchyScope<'a>, ExtErr> {
+) -> anyhow::Result<LexHierarchyScope<'a>> {
     let mut errs = vec![];
     let scope = lex_child_scopes(scope)?;
     let mut children = vec![];
@@ -3512,7 +3513,7 @@ pub mod model {
         PipelineStepDef,
         PipelineStopDef,
     };
-    use crate::space::err::{ParseErrs, SpaceErr};
+    use crate::space::err::{ParseErrs};
     use crate::space::loc::Version;
     use crate::space::parse::error::result;
     use crate::space::parse::{
@@ -3694,7 +3695,7 @@ pub mod model {
     }
 
     impl ValueMatcher<DirectedWave> for RouteScopeSelector {
-        fn is_match(&self, directed: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &DirectedWave) -> Result<(),()> {
             if self.name.as_str() != "Route" {
                 return Err(());
             }
@@ -3706,7 +3707,7 @@ pub mod model {
     }
 
     impl ValueMatcher<SingularDirectedWave> for RouteScopeSelector {
-        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(),()> {
             if self.name.as_str() != "Route" {
                 return Err(());
             }
@@ -3718,7 +3719,7 @@ pub mod model {
     }
 
     impl ValueMatcher<DirectedWave> for MessageScopeSelector {
-        fn is_match(&self, directed: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &DirectedWave) -> Result<(),()> {
             self.name.is_match(&directed.core().method.kind())?;
             match self.path.is_match(&directed.core().uri.path()) {
                 true => Ok(()),
@@ -3728,7 +3729,7 @@ pub mod model {
     }
 
     impl ValueMatcher<SingularDirectedWave> for MessageScopeSelector {
-        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(),()> {
             self.name.is_match(&directed.core().method.kind())?;
             match self.path.is_match(&directed.core().uri.path()) {
                 true => Ok(()),
@@ -3784,42 +3785,42 @@ pub mod model {
     }
 
     impl ValueMatcher<DirectedWave> for RouteScopeSelectorAndFilters {
-        fn is_match(&self, request: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, request: &DirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(request)
         }
     }
 
     impl ValueMatcher<SingularDirectedWave> for RouteScopeSelectorAndFilters {
-        fn is_match(&self, wave: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, wave: &SingularDirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(wave)
         }
     }
 
     impl ValueMatcher<DirectedWave> for MessageScopeSelectorAndFilters {
-        fn is_match(&self, request: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, request: &DirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(request)
         }
     }
 
     impl ValueMatcher<SingularDirectedWave> for MessageScopeSelectorAndFilters {
-        fn is_match(&self, request: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, request: &SingularDirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(request)
         }
     }
 
     impl ValueMatcher<DirectedWave> for MethodScopeSelectorAndFilters {
-        fn is_match(&self, directed: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &DirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(directed)
         }
     }
 
     impl ValueMatcher<SingularDirectedWave> for MethodScopeSelectorAndFilters {
-        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(),()> {
             // nothing for filters at this time...
             self.selector.is_match(directed)
         }
@@ -3861,7 +3862,7 @@ pub mod model {
     }
 
     impl ValueMatcher<DirectedWave> for MethodScopeSelector {
-        fn is_match(&self, directed: &DirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &DirectedWave) -> Result<(),()> {
             self.name.is_match(&directed.core().method)?;
             match self.path.is_match(&directed.core().uri.path()) {
                 true => Ok(()),
@@ -3871,7 +3872,7 @@ pub mod model {
     }
 
     impl ValueMatcher<SingularDirectedWave> for MethodScopeSelector {
-        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(), ()> {
+        fn is_match(&self, directed: &SingularDirectedWave) -> Result<(),()> {
             self.name.is_match(&directed.core().method)?;
             match self.path.is_match(&directed.core().uri.path()) {
                 true => Ok(()),
@@ -3927,7 +3928,7 @@ pub mod model {
                                     .as_str(),
                                     "invalid Cmd",
                                     selector.name,
-                                ))
+                                ).into())
                             }
                         }
                     }
@@ -3943,7 +3944,7 @@ pub mod model {
                                     .as_str(),
                                     "invalid Ext",
                                     selector.name,
-                                ))
+                                ).into())
                             }
                         }
                     }
@@ -4109,7 +4110,7 @@ pub mod model {
 
     /*
     impl CtxSubst<PipelineSegment> for PipelineSegmentCtx{
-        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> Result<PipelineSegment, ExtErr> {
+        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> anyhow::Result<PipelineSegment> {
             let mut errs = vec![];
             let step = match self.step.resolve_ctx(resolver) {
                 Ok(step) => Some(step),
@@ -4159,9 +4160,9 @@ pub mod model {
     //    pub type Pipeline = Vec<PipelineSegment>;
 
     impl<I: Span> TryFrom<LexParentScope<I>> for RouteScope {
-        type Error = SpaceErr;
+        type Error = anyhow::Error;
 
-        fn try_from(scope: LexParentScope<I>) -> Result<Self, Self::Error> {
+        fn try_from(scope: LexParentScope<I>) -> anyhow::Result<Self> {
             let mut errs = vec![];
             let mut message_scopes = vec![];
             let route_selector = RouteScopeSelectorAndFilters::from_selector(scope.selector)?;
@@ -4182,7 +4183,9 @@ pub mod model {
                     block: message_scopes,
                 })
             } else {
-                Err(ParseErrs::fold(errs).into())
+
+                //Err(ParseErrs::fold(errs).into())
+                Err(anyhow!("parse errors cannot currently be folded..."))
             }
         }
     }
@@ -4191,7 +4194,7 @@ pub mod model {
     impl<I: Span> LexScopeSelectorAndFilters<I> {
         pub fn to_value_pattern_scope_selector(
             self,
-        ) -> Result<ValuePatternScopeSelectorAndFilters, ExtErr> {
+        ) -> anyhow::Result<ValuePatternScopeSelectorAndFilters> {
             Ok(ValuePatternScopeSelectorAndFilters {
                 selector: self.selector.to_value_pattern_scope_selector()?,
                 filters: self.filters.to_scope_filters(),
@@ -4244,7 +4247,7 @@ pub mod model {
 
     /*
     impl CtxSubst<Pipeline> for PipelineCtx {
-        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> Result<Pipeline, ExtErr> {
+        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> anyhow::Result<Pipeline> {
             let mut errs = vec![];
             let mut segments = vec![];
             for segment in self.segments {
@@ -4300,7 +4303,7 @@ pub mod model {
 
     /*
     impl <I:Span> VarSubst<PipelineCtx> for VarPipeline<I> {
-        fn resolve_vars(self, resolver: &dyn VarResolver) -> Result<PipelineCtx, ExtErr> {
+        fn resolve_vars(self, resolver: &dyn VarResolver) -> anyhow::Result<PipelineCtx> {
             let mut pipeline = PipelineCtx::new();
             let mut errs = vec![];
             for segment in self.segments {
@@ -4326,7 +4329,7 @@ pub mod model {
 
     /*
     impl <I:Span> VarSubst<PipelineSegmentCtx> for VarPipelineSegment<I> {
-        fn resolve_vars(self, resolver: &dyn VarResolver) -> Result<PipelineSegmentCtx, ExtErr> {
+        fn resolve_vars(self, resolver: &dyn VarResolver) -> anyhow::Result<PipelineSegmentCtx> {
             unimplemented!()
             /*
             let mut errs = vec![];
@@ -4546,7 +4549,7 @@ pub mod model {
             }
         }
 
-        pub fn error_message<I: Span>(span: &I, context: &str) -> Result<&'static str, ()> {
+        pub fn error_message<I: Span>(span: &I, context: &str) -> anyhow::Result<&'static str> {
             if Self::Curly.open_context() == context {
                 Ok("expecting '{' (open scope block)")
             } else if Self::Parens.open_context() == context {
@@ -4572,7 +4575,7 @@ pub mod model {
             } else if Self::Square.unpaired_closing_scope() == context {
                 Ok("closing scope without an opening scope")
             } else {
-                Err(())
+                Err(anyhow!("could not determine error"))
             }
         }
 
@@ -4799,6 +4802,7 @@ pub mod model {
 
 pub mod error {
     use core::str::FromStr;
+    use anyhow::anyhow;
     //    use ariadne::Report;
     //    use ariadne::{Label, ReportKind, Source};
     use nom::branch::alt;
@@ -4817,21 +4821,21 @@ pub mod error {
     use starlane_parse::{len, Span};
 
     use crate::space::err::report::{Label, Report, ReportKind};
-    use crate::space::err::{ParseErrs, SpaceErr};
+    use crate::space::err::{ParseErrs};
     use crate::space::parse::model::NestedBlockKind;
     use crate::space::parse::nospace1;
 
-    pub fn result<I: Span, R>(result: anyhow::Result<(I, R), Err<ErrorTree<I>>>) -> Result<R> {
+    pub fn result<I: Span, R>(result: anyhow::Result<(I, R), Err<ErrorTree<I>>>) -> anyhow::Result<R> {
         match result {
             Ok((_, e)) => Ok(e),
-            Err(err) => Err(find_parse_err(&err)),
+            Err(err) => Err(find_parse_err(&err).into()),
         }
     }
 
     /*
     pub fn just_msg<R, E: From<String>>(
-        result: Result<(Span, R), Err<ErrorTree<Span>>>,
-    ) -> Result<R, E> {
+        result: anyhow::Result<(Span, R)>,
+    ) -> anyhow::Result<R> {
         match result {
             Ok((_, e)) => Ok(e),
             Err(err) => match find(&err) {
@@ -4843,7 +4847,7 @@ pub mod error {
 
      */
 
-    fn create_err_report<I: Span>(context: &str, loc: I) -> SpaceErr {
+    fn create_err_report<I: Span>(context: &str, loc: I) -> anyhow::Error {
         let mut builder = Report::build(ReportKind::Error, (), 23);
 
         match NestedBlockKind::error_message(&loc, context) {
@@ -5003,9 +5007,9 @@ pub mod error {
         //            let source = String::from_utf8(loc.get_line_beginning().to_vec() ).unwrap_or("could not parse utf8 of original source".to_string() );
         ParseErrs::from_report(builder.finish(), loc.extra()).into()
     }
-    pub fn find_parse_err<I: Span>(err: &Err<ErrorTree<I>>) -> SpaceErr {
+    pub fn find_parse_err<I: Span>(err: &Err<ErrorTree<I>>) -> anyhow::Error {
         match err {
-            Err::Incomplete(_) => "internal parser error: Incomplete".into(),
+            Err::Incomplete(_) => anyhow!("internal parser error: Incomplete"),
             Err::Error(err) => find_tree(err),
             Err::Failure(err) => find_tree(err),
         }
@@ -5016,7 +5020,7 @@ pub mod error {
         Message(String),
     }
 
-    pub fn find_tree<I: Span>(err: &ErrorTree<I>) -> SpaceErr {
+    pub fn find_tree<I: Span>(err: &ErrorTree<I>) -> anyhow::Error {
         match err {
             ErrorTree::Stack { base, contexts } => {
                 let (span, context) = contexts.first().unwrap();
@@ -5024,7 +5028,7 @@ pub mod error {
                         StackContext::Context(context) => {
                             create_err_report(*context, span.clone())
                         }
-                        _ => "internal parser error: could not find a parse context in order to generate a useful error message".into()
+                        _ => anyhow!("internal parser error: could not find a parse context in order to generate a useful error message")
                     }
             }
             ErrorTree::Base { location, kind } => create_err_report("eof", location.clone()),
@@ -5033,26 +5037,26 @@ pub mod error {
                     return find_tree(alt);
                 }
 
-                "internal parser error: ErrorTree::Alt could not find a suitable context error in the various alts".into()
+                anyhow!("internal parser error: ErrorTree::Alt could not find a suitable context error in the various alts")
             }
         }
     }
 
     pub fn first_context<I: Span>(
         orig: Err<ErrorTree<I>>,
-    ) -> Result<(String, Err<ErrorTree<I>>), ()> {
+    ) -> anyhow::Result<(String, Err<ErrorTree<I>>)> {
         match &orig {
             Err::Error(err) => match err {
                 ErrorTree::Stack { base, contexts } => {
                     let (_, context) = contexts.first().unwrap();
                     match context {
                         StackContext::Context(context) => Ok((context.to_string(), orig)),
-                        _ => Err(()),
+                        _ => Err(anyhow!("first context err")),
                     }
                 }
-                _ => Err(()),
+                _ => Err(anyhow!("first context err")),
             },
-            _ => Err(()),
+            _ => Err(anyhow!("first context err")),
         }
     }
 }
@@ -6544,7 +6548,7 @@ where
 }
 
 /*
-pub fn strip<I:Span>(input: Span) -> Result<Span, ExtErr>
+pub fn strip<I:Span>(input: Span) -> anyhow::Result<Span>
 {
     let (_, stripped) = strip_comments(input.clone())?;
     let span = LocatedSpan::new_extra(stripped.as_str().clone(), Arc::new(input.to_string()));
@@ -6587,7 +6591,7 @@ pub fn bind_config(src: &str) -> anyhow::Result<BindConfig> {
     let document = doc(src)?;
     match document {
         Document::BindConfig(bind_config) => Ok(bind_config),
-        _ => Err("not a bind config".into()),
+        _ => Err(anyhow!("not a bind config")),
     }
 }
 
@@ -6595,7 +6599,7 @@ pub fn mechtron_config(src: &str) -> anyhow::Result<MechtronConfig> {
     let document = doc(src)?;
     match document {
         Document::MechtronConfig(mechtron_config) => Ok(mechtron_config),
-        _ => Err("not a Mechtron config".into()),
+        _ => Err(anyhow!("not a Mechtron config")),
     }
 }
 
@@ -6770,8 +6774,9 @@ fn parse_bind_config<I: Span>(input: I) -> anyhow::Result<BindConfig> {
     }
 
     if !errors.is_empty() {
-        let errors = ParseErrs::fold(errors);
-        return Err(errors.into());
+        return Err(anyhow!("parse errors not presently supported."));
+//        let errors = ParseErrs::fold(errors);
+//        return Err(errors.into());
     }
 
     let mut config = BindConfig::new(scopes);
@@ -6806,7 +6811,7 @@ fn semantic_bind_scope<I: Span>(scope: LexScope<I>) -> anyhow::Result<BindScope>
     }
 }
 
-fn parse_bind_pipelines_scope<I: Span>(input: I) -> Result<Spanned<I, BindScopeKind>, ParseErrs> {
+fn parse_bind_pipelines_scope<I: Span>(input: I) -> anyhow::Result<Spanned<I, BindScopeKind>> {
     unimplemented!()
     /*
     let (next, lex_scopes) = lex_scopes(input.clone())?;
@@ -7058,7 +7063,7 @@ pub fn var_chunk<I: Span>(input: I) -> Res<I, Chunk<I>> {
     .map(|(next, variable_name)| (next, Chunk::Var(variable_name)))
 }
 /*
-pub fn unwrap_route_selector(input: &str ) -> Result<RouteSelector,ExtErr> {
+pub fn unwrap_route_selector(input: &str ) -> anyhow::Result<RouteSelector> {
     let input = new_span(input);
     let input = result(unwrap_block( BlockKind::Nested(NestedBlockKind::Parens),input))?;
 }
@@ -7222,6 +7227,8 @@ pub fn route_selector<I: Span>(input: I) -> anyhow::Result<RouteSelector> {
     ))
 }
 
+
+/*
 #[cfg(test)]
 pub mod test {
     use std::str::FromStr;
@@ -7241,7 +7248,6 @@ pub mod test {
     };
     use crate::space::command::Command;
     use crate::space::config::Document;
-    use crate::space::err::SpaceErr;
     use crate::space::parse::error::result;
     use crate::space::parse::model::{
         BlockKind, DelimitedBlockKind, NestedBlockKind, TerminatedBlockKind,
@@ -7320,6 +7326,7 @@ Mechtron(version=1.0.0) {
 
         let doc = log(doc(config)).is_err();
     }
+
 
     #[test]
     pub fn test_message_selector() {
@@ -7499,7 +7506,7 @@ Mechtron(version=1.0.0) {
                 let point = log(consume_point_var("../../hello") )?;
         //        let point: Point = log(point.to_resolved(&resolver))?;
           //      println!("point.to_string(): {}", point.to_string());
-                let _: Result<Point, ExtErr> = log(log(result(all_consuming(point_var)(new_span(
+                let _: anyhow::Result<Point> = log(log(result(all_consuming(point_var)(new_span(
                     "${not-supported}::my-domain.com:1.0.0:/${dorko}/x/",
                 )))?
                     .to_resolved(&env)));
@@ -8360,6 +8367,7 @@ Bind(version=1.2.3)-> {
         unimplemented!()
     }
 }
+*/
 
 fn create_command<I: Span>(input: I) -> Res<I, CommandVar> {
     tuple((tag("create"), create))(input)
@@ -8529,9 +8537,9 @@ pub struct KindLex {
 }
 
 impl TryInto<KindParts> for KindLex {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<KindParts, Self::Error> {
+    fn try_into(self) -> anyhow::Result<KindParts> {
         Ok(KindParts {
             base: BaseKind::try_from(self.base)?,
             sub: self.sub,
@@ -8553,12 +8561,12 @@ where
     }
 }
 
+/*
 #[cfg(test)]
 pub mod cmd_test {
     use core::str::FromStr;
 
     use crate::space::command::{Command, CommandVar};
-    use crate::space::err::SpaceErr;
     use crate::space::kind::Kind;
     use crate::space::parse::error::result;
     use crate::space::parse::{
@@ -8573,9 +8581,9 @@ pub mod cmd_test {
 
     /*
     #[mem]
-    pub async fn test2() -> Result<(),Error>{
+    pub async fn test2() -> anyhow::Result<()>{
         let input = "? xreate localhost<Space>";
-        let x: Result<CommandOp,VerboseError<&str>> = final_parser(command)(input);
+        let x: anyhow::Result<CommandOp> = final_parser(command)(input);
         match x {
             Ok(_) => {}
             Err(err) => {
@@ -8596,10 +8604,10 @@ pub mod cmd_test {
             Ok(_) => {}
             Err(nom::Err::Error(e)) => {
                 eprintln!("yikes!");
-                return Err("could not find context".into());
+                return Err(anyhow!("could not find context"));
             }
             Err(e) => {
-                return Err("some err".into());
+                return Err(anyhow!("some err"));
             }
         }
         Ok(())
@@ -8756,3 +8764,5 @@ pub mod cmd_test {
         let less = result(point_selector(new_span("less"))).unwrap();
     }
 }
+
+ */

@@ -20,6 +20,7 @@ use alloc::borrow::Cow;
 use dashmap::{DashMap, DashSet};
 use std::sync::Arc;
 use std::time::Duration;
+use anyhow::anyhow;
 use thiserror::__private::ThiserrorProvide;
 use tokio::sync::{mpsc, oneshot};
 use crate::space::thiserr::{err, ThisErr};
@@ -45,7 +46,7 @@ pub trait Router: Send + Sync {
 
 #[async_trait]
 pub trait TraversalRouter: Send + Sync {
-    async fn traverse(&self, traversal: Traversal<Wave>) -> Result<(), SpaceErr>;
+    async fn traverse(&self, traversal: Traversal<Wave>) -> anyhow::Result<()>;
 }
 
 #[derive(Clone)]
@@ -84,7 +85,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub async fn direct<D, W>(&self, wave: D) -> Result<W, SpaceErr>
+    pub async fn direct<D, W>(&self, wave: D) -> anyhow::Result<W>
     where
         W: FromReflectedAggregate,
         D: Into<DirectedProto>,
@@ -109,7 +110,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub async fn ping<D>(&self, ping: D) -> Result<WaveVariantDef<PongCore>, SpaceErr>
+    pub async fn ping<D>(&self, ping: D) -> anyhow::Result<WaveVariantDef<PongCore>>
     where
         D: Into<DirectedProto>,
     {
@@ -117,11 +118,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ping) = ping.kind {
             self.direct(ping).await
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(anyhow!("expected DirectedKind::Ping"))
         }
     }
 
-    pub async fn ripple<D>(&self, ripple: D) -> Result<Vec<WaveVariantDef<EchoCore>>, SpaceErr>
+    pub async fn ripple<D>(&self, ripple: D) -> anyhow::Result<Vec<WaveVariantDef<EchoCore>>>
     where
         D: Into<DirectedProto>,
     {
@@ -129,11 +130,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ripple) = ripple.kind {
             self.direct(ripple).await
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(anyhow!("expected DirectedKind::Ping"))
         }
     }
 
-    pub async fn signal<D>(&self, signal: D) -> Result<(), SpaceErr>
+    pub async fn signal<D>(&self, signal: D) -> anyhow::Result<()>
     where
         D: Into<DirectedProto>,
     {
@@ -141,7 +142,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Signal) = signal.kind {
             self.direct(signal).await
         } else {
-            Err(err("expected DirectedKind::Ping"))
+            Err(anyhow!("expected DirectedKind::Ping"))
         }
     }
 
@@ -176,7 +177,7 @@ impl ProtoTransmitter {
         self.router.route(wave).await
     }
 
-    pub async fn reflect<W>(&self, wave: W) -> Result<(), SpaceErr>
+    pub async fn reflect<W>(&self, wave: W) -> anyhow::Result<()>
     where
         W: Into<ReflectedProto>,
     {
@@ -228,7 +229,7 @@ impl TraversalTransmitter {
         }
     }
 
-    pub async fn direct<W>(&self, traversal: Traversal<DirectedWave>) -> Result<W, SpaceErr>
+    pub async fn direct<W>(&self, traversal: Traversal<DirectedWave>) -> anyhow::Result<W>
     where
         W: FromReflectedAggregate,
     {
@@ -266,7 +267,7 @@ impl<'a, I> InCtx<'a, I> {
 
 #[async_trait]
 pub trait DirectedHandlerSelector {
-    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> Result<&dyn DirectedHandler, ()>;
+    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> anyhow::Result<&dyn DirectedHandler>;
 }
 
 #[async_trait]
@@ -327,7 +328,7 @@ impl Exchanger {
         }
     }
 
-    pub async fn reflected(&self, reflect: ReflectedWave) -> Result<(), SpaceErr> {
+    pub async fn reflected(&self, reflect: ReflectedWave) -> anyhow::Result<()> {
         self.logger
             .track(&reflect, || Tracker::new("exchange", "Reflected"));
 
@@ -353,7 +354,7 @@ impl Exchanger {
                 .claimed
                 .contains(reflect.reflection_of().to_string().as_str())
             {
-                return Err(err(format!(
+                return Err(anyhow!(format!(
                     "Reflection already claimed for {} from: {} to: {} KIND: {} STATUS: {}",
                     reflect.reflection_of().to_short_string(),
                     reflect.from().to_string(),
@@ -362,7 +363,7 @@ impl Exchanger {
                     reflect.core().status.to_string()
                 )));
             }
-            return Err(err(format!(
+            return Err(anyhow!(format!(
                 "Not expecting reflected message for {} from: {} to: {} KIND: {} STATUS: {}",
                 reflect.reflection_of().to_short_string(),
                 reflect.from().to_string(),
@@ -518,7 +519,7 @@ where
 }
 
 impl RootInCtx {
-    pub fn push<'a, I>(&self) -> Result<InCtx<I>, SpaceErr>
+    pub fn push<'a, I>(&self) -> anyhow::Result<InCtx<I>>
     where
         Substance: ToSubstance<I>,
     {

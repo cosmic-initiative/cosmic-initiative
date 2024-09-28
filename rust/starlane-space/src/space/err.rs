@@ -1,3 +1,4 @@
+use core::fmt::Pointer;
 use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter};
 use std::num::ParseIntError;
@@ -19,16 +20,41 @@ use starlane_parse::SpanExtra;
 
 use crate::space::parse::error::find_parse_err;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use crate::space::thiserr::ThisErr;
 
-pub type SpaceErr=anyhow::Error;
 
 pub type AnyhowResult<T> = anyhow::Result<T>;
 
+#[derive(Error, Debug,strum_macros::Display)]
+pub enum SpaceErr {
+    Status { status: u16, message: String },
+    ParseErrs(#[from]  ParseErrs),
+    FromUtf8Error(#[from] FromUtf8Error),
+    String(String)
+}
 
+impl SpaceErr {
 
+    pub fn status(&self) -> u16 {
+        match self {
+            SpaceErr::Status { status, .. } => status.clone(),
+            _ => 500u16,
+        }
+    }
 
+    pub fn from_str<S: ToString>( s: S) -> Self {
+        Self::String(s.to_string())
+    }
+    pub fn not_found<S: ToString>(message: S) -> Self {
+        Self::new(404u16,message)
+    }
+    pub fn new<S: ToString>( status: u16, message: S) -> SpaceErr {
+       Self::Status { status: status, message: message.to_string() }
+    }
+}
 
+/*
 impl<I: Span> From<nom::Err<ErrorTree<I>>> for ParseErrs {
     fn from(err: Err<ErrorTree<I>>) -> Self {
         match find_parse_err(&err) {
@@ -41,12 +67,19 @@ impl<I: Span> From<nom::Err<ErrorTree<I>>> for ParseErrs {
         }
     }
 }
+ */
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Error)]
 pub struct ParseErrs {
     pub report: Vec<Report>,
     pub source: Option<Arc<String>>,
     pub ctx: String,
+}
+
+impl Display for ParseErrs {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "parse errors")
+    }
 }
 
 impl ParseErrs {
@@ -66,7 +99,7 @@ impl ParseErrs {
         }
     }
 
-    pub fn from_loc_span<I: Span>(message: &str, label: &str, span: I) -> SpaceErr {
+    pub fn from_loc_span<I: Span>(message: &str, label: &str, span: I) -> anyhow::Error{
         let mut builder = Report::build(ReportKind::Error, (), 23);
         let report = builder
             .with_message(message)

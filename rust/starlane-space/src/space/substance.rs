@@ -27,6 +27,7 @@ use crate::space::wave::{PongCore, Wave};
 use crate::{Details, SpaceErr, Status, Stub, Surface};
 use url::Url;
 use crate::space::util;
+use anyhow::anyhow;
 
 #[derive(
     Debug,

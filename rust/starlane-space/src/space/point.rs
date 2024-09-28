@@ -3,6 +3,7 @@ use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 use starlane_parse::{new_span, Trace};
 use std::path::PathBuf;
+use anyhow::anyhow;
 use md5::{Digest, Md5};
 use crate::space::err::{ParseErrs, SpaceErr};
 use crate::space::loc::{
@@ -18,7 +19,7 @@ use crate::space::parse::{
 use crate::space::selector::Selector;
 use crate::space::util::ToResolved;
 use crate::space::wave::{Agent, Recipients, ToRecipients};
-use crate::space::{ANONYMOUS, HYPERUSER};
+use crate::space::{err, ANONYMOUS, HYPERUSER};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum RouteSeg {
@@ -975,27 +976,27 @@ impl Point {
     /// returns the "file" path portion of this Point if there is one
     pub fn truncate_filepath(&self, parent: &Point) -> anyhow::Result<String> {
         if self.non_file_parent() == *parent {
-            self.filepath().ok_or(SpaceErr::str(format!(
+            self.filepath().ok_or(anyhow!(
                 "could not get filepath for point {}",
                 self.to_string()
-            )))
+            ))
         } else {
-            Result::Err(SpaceErr::str(format!(
+            Result::Err(anyhow!(
                 "path {} did not match with truncation parent {}",
                 self.to_string(),
                 parent.to_string()
-            )))
+            ))
         }
     }
 
     /// returns the "file" path portion of this Point if there is one
     pub fn relative_segs(&self, parent: &Point) -> anyhow::Result<Vec<String>> {
         if self.route != parent.route {
-            return Result::Err(SpaceErr::from(format!(
+            return Result::Err(anyhow!(
                 "parent point route {} must match child point route: {}",
                 parent.route.to_string(),
                 self.route.to_string()
-            )));
+            ));
         }
         if self.segments.len() < parent.segments.len() {
             return Result::Err(SpaceErr::from(format!(
@@ -1308,14 +1309,11 @@ impl Point {
             }
         }
 
-        Err(SpaceErr::Status {
-            status: 404,
-            message: format!(
+        Err(anyhow!(
                 "Point segment kind: {} not found in point: {}",
                 kind.to_string(),
                 self.to_string()
-            ),
-        })
+            ))
     }
 
     pub fn md5(&self) -> String {
