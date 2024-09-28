@@ -11,6 +11,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use starlane_parse::{new_span, Trace, Tw};
 
+use crate::space::err;
 use crate::space::err::ParseErrs;
 use crate::space::log::Trackable;
 use crate::space::parse::error::result;
@@ -29,7 +30,7 @@ use crate::space::wave::{
     Recipients, ToRecipients
     ,
 };
-use crate::{BaseKind, SpaceErr};
+use crate::{ BaseKind};
 
 pub static CENTRAL: Lazy<Point> = Lazy::new(|| StarKey::central().to_point());
 pub static GLOBAL_LOGGER: Lazy<Point> = Lazy::new(|| Point::from_str("GLOBAL::logger").unwrap());
@@ -100,7 +101,7 @@ impl Uuid {
     }
      */
 
-    pub fn from<S: ToString>(uuid: S) -> anyhow::Result<Self> {
+    pub fn from<S: ToString>(uuid: S) -> err::Result<Self> {
         //Ok(Self::new(uuid::Uuid::from_str(uuid.to_string().as_str()).map_err(|e| UniErr::server_error(format!("'{}' is not a valid uuid",uuid.to_string())))?))
         Ok(Self {
             uuid: uuid.to_string(),
@@ -190,7 +191,7 @@ impl ToString for Version {
 }
 
 impl TryInto<semver::Version> for Version {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<semver::Version, Self::Error> {
         Ok(self.version)
@@ -198,7 +199,7 @@ impl TryInto<semver::Version> for Version {
 }
 
 impl FromStr for Version {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let version = semver::Version::from_str(s)?;
@@ -225,9 +226,9 @@ pub enum VarVal<V> {
 
 impl<V> ToResolved<V> for VarVal<V>
 where
-    V: FromStr<Err = SpaceErr>,
+    V: FromStr<Err = err::Error>,
 {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<V> {
+    fn to_resolved(self, env: &Env) -> err::Result<V> {
         match self {
             VarVal::Var(var) => match env.val(var.as_str()) {
                 Ok(val) => {
@@ -568,12 +569,12 @@ impl Into<Surface> for StarKey {
 }
 
 impl TryFrom<Point> for StarKey {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(point: Point) -> Result<Self, Self::Error> {
         match point.route {
             RouteSeg::Star(star) => StarKey::from_str(star.as_str()),
-            _ => Err("can only extract StarKey from Mesh point routes".into()),
+            _ => Err(err!("can only extract StarKey from Mesh point routes")),
         }
     }
 }
@@ -649,7 +650,7 @@ impl StarKey {
 }
 
 impl FromStr for StarKey {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(result(all_consuming(parse_star_key)(new_span(s)))?)
@@ -658,7 +659,7 @@ impl FromStr for StarKey {
 
 #[async_trait]
 pub trait PointFactory: Send + Sync {
-    async fn create(&self) -> anyhow::Result<Point>;
+    async fn create(&self) -> err::Result<Point>;
 }
 
 #[cfg(test)]

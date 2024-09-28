@@ -1,12 +1,12 @@
-use std::ops::Deref;
-
+use anyhow::anyhow;
 use nom::combinator::all_consuming;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 use starlane_parse::new_span;
 
-use crate::space::err::SpaceErr;
+use crate::space::err::{err, Error};
 use crate::space::parse::camel_case_chars;
 use crate::space::parse::error::result;
 use crate::space::parse::model::MethodScopeSelector;
@@ -15,6 +15,7 @@ use crate::space::util::{ValueMatcher, ValuePattern};
 use crate::space::wave::core::http2::StatusCode;
 use crate::space::wave::core::{DirectedCore, HeaderMap, Method, ReflectedCore};
 use url::Url;
+use crate::space::err;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ExtMethod {
@@ -22,7 +23,7 @@ pub struct ExtMethod {
 }
 
 impl ExtMethod {
-    pub fn new<S: ToString>(string: S) -> Result<Self, SpaceErr> {
+    pub fn new<S: ToString>(string: S) -> err::Result<Self> {
         let tmp = string.to_string();
         let string = result(all_consuming(camel_case_chars)(new_span(tmp.as_str())))?.to_string();
         Ok(Self { string })
@@ -55,7 +56,7 @@ impl Into<MethodScopeSelector> for ExtMethod {
 }
 
 impl TryFrom<String> for ExtMethod {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Self::new(value)
@@ -63,7 +64,7 @@ impl TryFrom<String> for ExtMethod {
 }
 
 impl TryFrom<&str> for ExtMethod {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Self::new(value)
@@ -108,9 +109,9 @@ impl Default for ExtDirected {
 }
 
 impl ExtDirected {
-    pub fn new<M>(method: M) -> Result<Self, SpaceErr>
+    pub fn new<M>(method: M) -> Result<Self, err::Error>
     where
-        M: TryInto<ExtMethod, Error = SpaceErr>,
+        M: TryInto<ExtMethod, Error = err::Error>,
     {
         Ok(ExtDirected {
             method: method.try_into()?,
@@ -142,9 +143,9 @@ impl ExtDirected {
 }
 
 impl TryFrom<DirectedCore> for ExtDirected {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
-    fn try_from(core: DirectedCore) -> Result<Self, Self::Error> {
+    fn try_from(core: DirectedCore) -> err::Result<Self> {
         if let Method::Ext(action) = core.method {
             Ok(Self {
                 method: action,
@@ -153,7 +154,7 @@ impl TryFrom<DirectedCore> for ExtDirected {
                 body: core.body,
             })
         } else {
-            Err("expected Ext".into())
+            Err(err!("expected Ext"))
         }
     }
 }

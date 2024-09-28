@@ -21,14 +21,13 @@ use space::command::direct::create::KindTemplate;
 use space::command::direct::delete::Delete;
 use space::command::direct::select::Select;
 use space::config::bind::BindConfig;
-use space::kind::{BaseKind, Kind, StarSub};
+use space::kind::{BaseKind, Kind};
 use space::loc::Surface;
 use space::particle::{Details, Status, Stub};
 use space::substance::Bin;
 use space::substance::{Substance, ToSubstance};
 use space::wave::core::ReflectedCore;
 
-use space::err::SpaceErr;
 use space::hyper::ParticleRecord;
 use space::wave::Agent;
 

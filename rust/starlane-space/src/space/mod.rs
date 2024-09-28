@@ -1,6 +1,6 @@
-use once_cell::sync::Lazy;
-use core::str::FromStr;
 use crate::space::point::Point;
+use core::str::FromStr;
+use once_cell::sync::Lazy;
 
 pub mod artifact;
 pub mod config;

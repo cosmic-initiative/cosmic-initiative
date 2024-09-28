@@ -9,7 +9,7 @@ use starlane_parse::Tw;
 use starlane_primitive_macros::Autobox;
 
 use crate::space::command::{Command, RawCommand};
-use crate::space::err::ParseErrs;
+use crate::space::err::{err, ParseErrs};
 use crate::space::hyper::{Greet, HyperSubstance, Knock, ParticleLocation};
 use crate::space::loc::Meta;
 use crate::space::log::{AuditLog, Log, LogSpan, LogSpanEvent, PointlessLog};
@@ -17,6 +17,7 @@ use crate::space::parse::model::Subst;
 use crate::space::parse::Env;
 use crate::space::particle::Particle;
 use crate::space::point::{Point, PointCtx, PointVar};
+use crate::space::{err, util};
 use crate::space::util::{ToResolved, ValueMatcher, ValuePattern};
 use crate::space::wave::core::cmd::CmdMethod;
 use crate::space::wave::core::ext::ExtMethod;
@@ -24,10 +25,8 @@ use crate::space::wave::core::http2::HttpMethod;
 use crate::space::wave::core::hyp::HypMethod;
 use crate::space::wave::core::{DirectedCore, HeaderMap, ReflectedCore};
 use crate::space::wave::{PongCore, Wave};
-use crate::{Details, SpaceErr, Status, Stub, Surface};
+use crate::{Details, Status, Stub, Surface};
 use url::Url;
-use crate::space::util;
-use anyhow::anyhow;
 
 #[derive(
     Debug,
@@ -111,7 +110,7 @@ pub enum Substance {
     Knock(Knock),
     Greet(Greet),
     Log(LogSubstance),
-    Err(SpaceErr),
+    Err(String),
 }
 
 impl Substance {
@@ -133,8 +132,8 @@ impl Substance {
 }
 
 pub trait ToSubstance<S> {
-    fn to_substance(self) -> anyhow::Result<S>;
-    fn to_substance_ref(&self) -> anyhow::Result<&S>;
+    fn to_substance(self) -> err::Result<S>;
+    fn to_substance_ref(&self) -> err::Result<&S>;
 }
 
 pub trait ChildSubstance {}
@@ -171,7 +170,7 @@ impl ToString for Token {
 }
 
 impl FromStr for Token {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Token::new(s))
@@ -179,7 +178,7 @@ impl FromStr for Token {
 }
 
 impl TryFrom<PongCore> for Token {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(response: PongCore) -> Result<Self, Self::Error> {
         response.core.body.try_into()
@@ -198,7 +197,7 @@ impl Default for Substance {
 }
 
 impl Substance {
-    pub fn to_text(self) -> anyhow::Result<String> {
+    pub fn to_text(self) -> err::Result<String> {
         if let Substance::Text(text) = self {
             Ok(text)
         } else {
@@ -214,7 +213,7 @@ impl Substance {
         }
     }
 
-    pub fn from_bin(bin: Bin) -> anyhow::Result<Self> {
+    pub fn from_bin(bin: Bin) -> err::Result<Self> {
         Ok(bincode::deserialize(bin.as_slice())?)
     }
 
@@ -256,7 +255,7 @@ impl Substance {
         }
     }
 
-    pub fn to_bin(&self) -> anyhow::Result<Bin> {
+    pub fn to_bin(&self) -> err::Result<Bin> {
         Ok(bincode::serialize(&self)?)
         /*        match self {
                    Substance::Empty => Ok(vec![]),
@@ -290,7 +289,7 @@ pub enum LogSubstance {
 }
 
 impl TryInto<HashMap<String, Substance>> for Substance {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<HashMap<String, Substance>, Self::Error> {
         match self {
@@ -337,7 +336,7 @@ impl SubstanceMap {
     }
 
      */
-    pub fn to_bin(self) -> anyhow::Result<Bin> {
+    pub fn to_bin(self) -> err::Result<Bin> {
         Ok(bincode::serialize(&self)?)
     }
 
@@ -354,8 +353,8 @@ pub struct FormErrs {
 }
 
 impl FormErrs {
-    pub fn to_starlane_err(&self) -> SpaceErr {
-        SpaceErr::new(500, self.to_string().as_str())
+    pub fn to_starlane_err(&self) -> err::Error {
+        err!(self.to_string())
     }
 
     pub fn empty() -> Self {
@@ -371,13 +370,13 @@ impl FormErrs {
     }
 }
 
-impl From<SpaceErr> for FormErrs {
-    fn from(err: SpaceErr) -> Self {
+impl From<err::Error> for FormErrs {
+    fn from(err: err::Error) -> Self {
         match err {
-            SpaceErr::Status { status, message } => {
+            err::Error::Status { status, message } => {
                 Self::default(format!("{} {}", status, message).as_str())
             }
-            SpaceErr::ParseErrs(_) => Self::default("500: parse error"),
+            err::Error::ParseErrs(_) => Self::default("500: parse error"),
         }
     }
 }
@@ -418,7 +417,7 @@ impl SubstanceList {
     pub fn new() -> Self {
         Self { list: vec![] }
     }
-    pub fn to_bin(self) -> anyhow::Result<Bin> {
+    pub fn to_bin(self) -> err::Result<Bin> {
         Ok(bincode::serialize(&self)?)
     }
 }
@@ -444,7 +443,7 @@ pub struct ListPattern {
 }
 
 impl ListPattern {
-    pub fn is_match(&self, list: &SubstanceList) -> anyhow::Result<()> {
+    pub fn is_match(&self, list: &SubstanceList) -> err::Result<()> {
         /*
         for i in &list.list {
             if self.primitive != i.primitive_type() {
@@ -483,7 +482,7 @@ pub enum SubstanceTypePatternDef<Pnt> {
 }
 
 impl ToResolved<SubstanceTypePatternDef<Point>> for SubstanceTypePatternDef<PointCtx> {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstanceTypePatternDef<Point>> {
+    fn to_resolved(self, env: &Env) -> err::Result<SubstanceTypePatternDef<Point>> {
         match self {
             SubstanceTypePatternDef::Empty => Ok(SubstanceTypePatternDef::Empty),
             SubstanceTypePatternDef::Primitive(payload_type) => {
@@ -498,7 +497,7 @@ impl ToResolved<SubstanceTypePatternDef<Point>> for SubstanceTypePatternDef<Poin
 }
 
 impl ToResolved<SubstanceTypePatternCtx> for SubstanceTypePatternVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstanceTypePatternCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<SubstanceTypePatternCtx> {
         match self {
             SubstanceTypePatternVar::Empty => Ok(SubstanceTypePatternCtx::Empty),
             SubstanceTypePatternVar::Primitive(payload_type) => {
@@ -590,7 +589,7 @@ pub struct SubstancePatternDef<Pnt> {
 }
 
 impl ToResolved<SubstancePatternCtx> for SubstancePatternVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<SubstancePatternCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<SubstancePatternCtx> {
         let mut errs = vec![];
         let structure = match self.structure.to_resolved(env) {
             Ok(structure) => Some(structure),
@@ -617,13 +616,13 @@ impl ToResolved<SubstancePatternCtx> for SubstancePatternVar {
                 format: self.format,
             })
         } else {
-            Err(ParseErrs::fold(errs).into())
+            Err(err!("aggregated ParseErrors"))
         }
     }
 }
 
 impl ToResolved<SubstancePattern> for SubstancePatternCtx {
-    fn to_resolved(self, resolver: &Env) -> anyhow::Result<SubstancePattern> {
+    fn to_resolved(self, resolver: &Env) -> err::Result<SubstancePattern> {
         let mut errs = vec![];
         let structure = match self.structure.to_resolved(resolver) {
             Ok(structure) => Some(structure),
@@ -675,7 +674,7 @@ pub type CallWithConfigCtx = CallWithConfigDef<PointCtx>;
 pub type CallWithConfigVar = CallWithConfigDef<PointVar>;
 
 impl ToResolved<CallWithConfigCtx> for CallWithConfigVar {
-    fn to_resolved(self, resolver: &Env) -> anyhow::Result<CallWithConfigCtx> {
+    fn to_resolved(self, resolver: &Env) -> err::Result<CallWithConfigCtx> {
         let mut errs = vec![];
         let call = match self.call.to_resolved(resolver) {
             Ok(call) => Some(call),
@@ -707,7 +706,7 @@ impl ToResolved<CallWithConfigCtx> for CallWithConfigVar {
 }
 
 impl ToResolved<CallWithConfig> for CallWithConfigCtx {
-    fn to_resolved(self, resolver: &Env) -> anyhow::Result<CallWithConfig> {
+    fn to_resolved(self, resolver: &Env) -> err::Result<CallWithConfig> {
         let mut errs = vec![];
         let call = match self.call.to_resolved(resolver) {
             Ok(call) => Some(call),
@@ -743,7 +742,7 @@ pub type CallCtx = CallDef<PointCtx>;
 pub type CallVar = CallDef<PointVar>;
 
 impl ToResolved<Call> for CallCtx {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<Call> {
+    fn to_resolved(self, env: &Env) -> err::Result<Call> {
         Ok(Call {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -752,7 +751,7 @@ impl ToResolved<Call> for CallCtx {
 }
 
 impl ToResolved<CallCtx> for CallVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<CallCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<CallCtx> {
         Ok(CallCtx {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -761,7 +760,7 @@ impl ToResolved<CallCtx> for CallVar {
 }
 
 impl ToResolved<Call> for CallVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<Call> {
+    fn to_resolved(self, env: &Env) -> err::Result<Call> {
         let call: CallCtx = self.to_resolved(env)?;
         call.to_resolved(env)
     }
@@ -1009,7 +1008,7 @@ pub struct MultipartForm {
 }
 
 impl TryInto<HashMap<String, String>> for MultipartForm {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<HashMap<String, String>, Self::Error> {
         let map: HashMap<String, String> = serde_urlencoded::from_str(&self.data)?;
@@ -1092,7 +1091,7 @@ impl DerefMut for MultipartFormBuilder {
 }
 
 impl MultipartFormBuilder {
-    pub fn build(self) -> anyhow::Result<MultipartForm> {
+    pub fn build(self) -> err::Result<MultipartForm> {
         let data = serde_urlencoded::to_string(&self.map)?;
         Ok(MultipartForm { data })
     }

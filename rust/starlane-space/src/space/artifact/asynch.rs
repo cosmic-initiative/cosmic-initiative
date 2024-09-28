@@ -1,20 +1,19 @@
-use core::fmt::Debug;
 use crate::space::artifact::ArtRef;
 use crate::space::config::mechtron::MechtronConfig;
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::loc::ToSurface;
 use crate::space::point::Point;
 use crate::space::wave::core::cmd::CmdMethod;
 use crate::space::wave::exchange::asynch::ProtoTransmitter;
 use crate::space::wave::DirectedProto;
-use crate::{Bin, BindConfig, SpaceErr, Stub, Substance};
+use crate::{Bin, BindConfig, Stub, Substance};
+use core::fmt::Debug;
 use dashmap::DashMap;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use anyhow::anyhow;
-use nom_supreme::ParserExt;
 use tokio::sync::watch;
-use crate::space::thiserr::err;
 
 #[derive(Clone)]
 pub struct ArtifactApi {
@@ -51,7 +50,7 @@ impl ArtifactApi {
         self.fetcher_rx.borrow().clone()
     }
 
-    pub async fn mechtron(&self, point: &Point) -> anyhow::Result<ArtRef<MechtronConfig>> {
+    pub async fn mechtron(&self, point: &Point) -> err::Result<ArtRef<MechtronConfig>> {
         {
             if self.mechtrons.contains_key(point) {
                 let mechtron = self.mechtrons.get(point).unwrap().clone();
@@ -64,7 +63,7 @@ impl ArtifactApi {
         return Ok(ArtRef::new(mechtron, point.clone()));
     }
 
-    pub async fn bind(&self, point: &Point) -> anyhow::Result<ArtRef<BindConfig>> {
+    pub async fn bind(&self, point: &Point) -> err::Result<ArtRef<BindConfig>> {
         {
             if self.binds.contains_key(point) {
                 let bind = self.binds.get(point).unwrap().clone();
@@ -79,7 +78,7 @@ impl ArtifactApi {
         return Ok(ArtRef::new(bind, point.clone()));
     }
 
-    pub async fn wasm(&self, point: &Point) -> anyhow::Result<ArtRef<Bin>> {
+    pub async fn wasm(&self, point: &Point) -> err::Result<ArtRef<Bin>> {
         {
             if self.wasm.contains_key(point) {
                 let wasm = self.wasm.get(point).unwrap().clone();
@@ -94,12 +93,12 @@ impl ArtifactApi {
         return Ok(ArtRef::new(Arc::new(wasm), point.clone()));
     }
 
-    async fn fetch<A>(&self, point: &Point) -> anyhow::Result<A>
+    async fn fetch<A>(&self, point: &Point) -> err::Result<A>
     where
         A: TryFrom<Bin, Error = anyhow::Error>
     {
         if !point.has_bundle() {
-            Err(anyhow!("expecting a bundle point, received: {}",point.to_string()))?;
+            Err(err!("expecting a bundle point, received: {}",point.to_string()))?;
         }
         let bin = self.get_fetcher().fetch(point).await?;
         Ok(A::try_from(bin)?)
@@ -118,20 +117,20 @@ impl FetchChamber {
 
 #[async_trait]
 pub trait ArtifactFetcher: Send + Sync {
-    async fn stub(&self, point: &Point) -> anyhow::Result<Stub>;
-    async fn fetch(&self, point: &Point) -> anyhow::Result<Bin>;
+    async fn stub(&self, point: &Point) -> err::Result<Stub>;
+    async fn fetch(&self, point: &Point) -> err::Result<Bin>;
 }
 
 pub struct NoDiceArtifactFetcher;
 
 #[async_trait]
 impl ArtifactFetcher for NoDiceArtifactFetcher {
-    async fn stub(&self, point: &Point) -> anyhow::Result<Stub> {
-        Err(anyhow!("cannot pull artifacts right now"))
+    async fn stub(&self, point: &Point) -> err::Result<Stub> {
+        Err(err!("cannot pull artifacts right now"))
     }
 
-    async fn fetch(&self, point: &Point) -> anyhow::Result<Bin> {
-        Err(anyhow!("cannot pull artifacts right now"))
+    async fn fetch(&self, point: &Point) -> err::Result<Bin> {
+        Err(err!("cannot pull artifacts right now"))
     }
 }
 
@@ -147,11 +146,11 @@ impl ReadArtifactFetcher {
 
 #[async_trait]
 impl ArtifactFetcher for ReadArtifactFetcher {
-    async fn stub(&self, point: &Point) -> anyhow::Result<Stub> {
-        Err(anyhow!("could not find stub: '{}'",point.to_string()))
+    async fn stub(&self, point: &Point) -> err::Result<Stub> {
+        Err(err!("could not find stub: '{}'",point.to_string()))
     }
 
-    async fn fetch(&self, point: &Point) -> anyhow::Result<Bin> {
+    async fn fetch(&self, point: &Point) -> err::Result<Bin> {
         let mut directed = DirectedProto::ping();
         directed.to(point.clone().to_surface());
         directed.method(CmdMethod::Read);
@@ -159,7 +158,7 @@ impl ArtifactFetcher for ReadArtifactFetcher {
         pong.core.ok_or()?;
         match pong.variant.core.body {
             Substance::Bin(bin) => Ok(bin),
-            other => Err(anyhow!(
+            other => Err(err!(
                 "expected Bin, encountered unexpected substance {} when fetching Artifact",
                 other.kind().to_string()
             )),
@@ -173,15 +172,15 @@ pub struct MapFetcher {
 
 #[async_trait]
 impl ArtifactFetcher for MapFetcher {
-    async fn stub(&self, point: &Point) -> anyhow::Result<Stub> {
+    async fn stub(&self, point: &Point) -> err::Result<Stub> {
         todo!()
     }
 
-    async fn fetch(&self, point: &Point) -> anyhow::Result<Bin> {
-        let rtn = self.map.get(point).ok_or(SpaceErr::not_found(format!(
+    async fn fetch(&self, point: &Point) -> err::Result<Bin> {
+        let rtn = self.map.get(point).ok_or(err!(
             "could not find {}",
             point.to_string()
-        )))?;
+        ))?;
         Ok(rtn.clone())
     }
 }

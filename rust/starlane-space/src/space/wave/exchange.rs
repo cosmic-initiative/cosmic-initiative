@@ -2,14 +2,15 @@ pub mod asynch;
 pub mod synch;
 
 use alloc::borrow::Cow;
-use std::ops::Deref;
-use anyhow::anyhow;
 use asynch::{
     DirectedHandler, Router,
 };
+use std::ops::Deref;
 use tokio::sync::broadcast;
 
 use crate::space::config::bind::RouteSelector;
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::loc::{ToPoint, ToSurface, Topic};
 use crate::space::log::{PointLogger, RootLogger, SpanLogger};
 use crate::space::wave::core::Method;
@@ -18,7 +19,7 @@ use crate::space::wave::{
     Handling, PongCore, Recipients, ReflectedProto,
     ReflectedWave, Scope, Session, ToRecipients, Wave, WaveVariantDef,
 };
-use crate::{Agent, ReflectedCore, SpaceErr, Substance, Surface, ToSubstance};
+use crate::{Agent, ReflectedCore, Substance, Surface, ToSubstance};
 
 #[derive(Clone)]
 pub struct DirectedHandlerShellDef<D, T> {
@@ -244,7 +245,7 @@ where
     }
 
     /*
-    pub async fn ping(&self, req: DirectedProto) -> Result<Wave<Pong>, UniErr> {
+    pub async fn ping(&self, req: DirectedProto) -> err::Result<Wave<Pong>> {
         self.transmitter.direct(req).await
     }
 
@@ -266,7 +267,7 @@ where
         self.root.wave.core().bad_request()
     }
 
-    pub fn err(self, err: SpaceErr) -> ReflectedCore {
+    pub fn err(self, err: err::Error) -> ReflectedCore {
         self.root.wave.core().err(err)
     }
 }
@@ -325,12 +326,12 @@ pub struct ProtoTransmitterDef<R, E> {
 }
 
 impl<R, E> ProtoTransmitterDef<R, E> {
-    pub fn from_topic(&mut self, topic: Topic) -> Result<(), SpaceErr> {
+    pub fn from_topic(&mut self, topic: Topic) -> err::Result<()> {
         self.from = match self.from.clone() {
             SetStrategy::None => {
-                return Err(anyhow!(
+                return Err(err!(
                     "cannot set Topic without first setting Surface",
-                ).chain());
+                ));
             }
             SetStrategy::Fill(from) => SetStrategy::Fill(from.with_topic(topic)),
             SetStrategy::Override(from) => SetStrategy::Override(from.with_topic(topic)),
@@ -422,9 +423,9 @@ pub enum SetStrategy<T> {
 }
 
 impl<T> SetStrategy<T> {
-    pub fn unwrap(self) -> Result<T, SpaceErr> {
+    pub fn unwrap(self) -> err::Result<T> {
         match self {
-            SetStrategy::None => Err("cannot unwrap a SetStrategy::None".into()),
+            SetStrategy::None => Err(err!("cannot unwrap a SetStrategy::None")),
             SetStrategy::Fill(t) => Ok(t),
             SetStrategy::Override(t) => Ok(t),
         }
@@ -432,9 +433,9 @@ impl<T> SetStrategy<T> {
 }
 
 impl SetStrategy<Surface> {
-    pub fn with_topic(self, topic: Topic) -> Result<Self, SpaceErr> {
+    pub fn with_topic(self, topic: Topic) -> err::Result<Self> {
         match self {
-            SetStrategy::None => Err("cannot set topic if Strategy is None".into()),
+            SetStrategy::None => Err(err!("cannot set topic if Strategy is None")),
             SetStrategy::Fill(surface) => Ok(SetStrategy::Fill(surface.with_topic(topic))),
             SetStrategy::Override(surface) => Ok(SetStrategy::Override(surface.with_topic(topic))),
         }

@@ -1,10 +1,12 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
-use serde::{Deserialize, Serialize};
 
 use starlane_primitive_macros::Autobox;
 
 use crate::space::command::Command;
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::loc::ToSurface;
 use crate::space::substance::FormErrs;
 use crate::space::util::{ValueMatcher, ValuePattern};
@@ -13,9 +15,8 @@ use crate::space::wave::core::ext::ExtMethod;
 use crate::space::wave::core::http2::{HttpMethod, StatusCode};
 use crate::space::wave::core::hyp::HypMethod;
 use crate::space::wave::{Bounce, PingCore, PongCore, ToRecipients, WaveId};
-use crate::{SpaceErr, Substance, Surface, ToSubstance};
+use crate::{Substance, Surface, ToSubstance};
 use url::Url;
-use crate::space::thiserr::ThisErr;
 
 pub mod cmd;
 pub mod ext;
@@ -34,24 +35,26 @@ impl<S> ToSubstance<S> for ReflectedCore
 where
     Substance: ToSubstance<S>,
 {
-    fn to_substance(self) -> anyhow::Result<S> {
+    fn to_substance(self) -> err::Result<S> {
         self.body.to_substance()
     }
 
-    fn to_substance_ref(&self) -> anyhow::Result<&S> {
+    fn to_substance_ref(&self) -> err::Result<&S> {
         self.body.to_substance_ref()
     }
 }
 
 impl ReflectedCore {
-    pub fn to_err(&self) -> SpaceErr {
+    pub fn to_err(&self) -> anyhow::Error {
         if self.status.is_success() {
-            "cannot convert a success into an error".into()
+            err!("cannot convert a success into an error").into()
         } else {
             if let Substance::FormErrs(errors) = &self.body {
-                errors.to_starlane_err()
+                err!("{}",errors.to_string())
             } else {
-                self.status.to_string().into()
+                err!("{}",self.status.to_string())
+
+
             }
         }
     }
@@ -73,9 +76,15 @@ impl ReflectedCore {
         match result {
             Ok(core) => core,
             Err(err) => {
+                let mut core = ReflectedCore::fail(500u16, err.to_string());
+                core.body = Substance::Text(err.to_string());
+                core
+                /*
                 let mut core = ReflectedCore::status(err.status());
                 core.body = Substance::Text(err.to_string());
                 core
+
+                 */
             }
         }
     }
@@ -151,11 +160,11 @@ impl ReflectedCore {
         }
     }
 
-    pub fn err(err: SpaceErr) -> Self {
+    pub fn err(err: err::Error) -> Self {
         let errors = FormErrs::default(err.to_string().as_str());
         Self {
             headers: HeaderMap::new(),
-            status: StatusCode::from_u16(err.status())
+            status: StatusCode::from_u16(500u16)
                 .unwrap_or(StatusCode::from_u16(500u16).unwrap()),
             body: Substance::FormErrs(errors),
         }
@@ -187,24 +196,24 @@ impl ReflectedCore {
 }
 
 impl ReflectedCore {
-    pub fn as_result<E: From<&'static str>, P: TryFrom<Substance>>(self) -> anyhow::Result<P> {
+    pub fn as_result<P: TryFrom<Substance>>(self) -> err::Result<P> {
         if self.status.is_success() {
             match P::try_from(self.body) {
                 Ok(substance) => Ok(substance),
-                Err(err) => Err(E::from("error")),
+                Err(err) => Err(err!("error")),
             }
         } else {
-            Err(E::from("error"))
+            Err(err!("error"))
         }
     }
 
-    pub fn ok_or(&self) -> anyhow::Result<()> {
+    pub fn ok_or(&self) -> err::Result<()> {
         if self.is_ok() {
             Ok(())
         } else if let Substance::Err(err) = &self.body {
-            Err(err.clone())
+            Err(err!(err.to_string()))
         } else {
-            Err(ThisErr::new(self.status.as_u16(), "error"))
+            Err(err!("error"))
         }
     }
 }
@@ -213,7 +222,7 @@ impl ReflectedCore {
 impl TryInto<http::response::Builder> for ReflectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> anyhow::Result<http::response::Builder> {
+    fn try_into(self) -> err::Result<http::response::Builder> {
         let mut builder = http::response::Builder::new();
 
         for (name, value) in self.headers {
@@ -232,7 +241,7 @@ impl TryInto<http::response::Builder> for ReflectedCore {
 impl TryInto<http::Response<Bin>> for ReflectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> anyhow::Result<http::Response<Bin>> {
+    fn try_into(self) -> err::Result<http::Response<Bin>> {
         let mut builder = http::response::Builder::new();
 
         for (name, value) in self.headers {
@@ -387,11 +396,11 @@ impl<S> ToSubstance<S> for DirectedCore
 where
     Substance: ToSubstance<S>,
 {
-    fn to_substance(self) -> anyhow::Result<S> {
+    fn to_substance(self) -> err::Result<S> {
         self.body.to_substance()
     }
 
-    fn to_substance_ref(&self) -> anyhow::Result<&S> {
+    fn to_substance_ref(&self) -> err::Result<&S> {
         self.body.to_substance_ref()
     }
 }
@@ -435,7 +444,7 @@ impl DirectedCore {
 }
 
 impl TryFrom<PingCore> for DirectedCore {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(request: PingCore) -> Result<Self,Self::Error> {
         Ok(request.core)
@@ -462,7 +471,7 @@ impl Into<DirectedCore> for Command {
 impl TryFrom<http::Request<Bin>> for DirectedCore {
     type Error = UniErr;
 
-    fn try_from(request: http::Request<Bin>) -> anyhow::Result<Self> {
+    fn try_from(request: http::Request<Bin>) -> err::Result<Self> {
         Ok(Self {
             headers: request.headers().clone(),
             method: Method::Http(request.method().clone().try_into()?),
@@ -475,7 +484,7 @@ impl TryFrom<http::Request<Bin>> for DirectedCore {
 impl TryInto<http::Request<Bin>> for DirectedCore {
     type Error = UniErr;
 
-    fn try_into(self) -> anyhow::Result<http::Request<Bin>> {
+    fn try_into(self) -> err::Result<http::Request<Bin>> {
         let mut builder = http::Request::builder();
         for (name, value) in self.headers {
             match name {
@@ -593,14 +602,10 @@ impl DirectedCore {
         }
     }
 
-    pub fn err<E: Error>(&self, error: E) -> ReflectedCore {
+    pub fn err<E: ToString>(&self, error: E) -> ReflectedCore {
 
-        let errors = FormErrs::default(error.message().as_str());
-        let status = match StatusCode::from_u16(error.status()) {
-            Ok(status) => status,
-            Err(_) => StatusCode::from_u16(500u16).unwrap(),
-        };
-        println!("----->   returning STATUS of {}", status.to_string());
+        let errors = FormErrs::default(error.to_string());
+
         ReflectedCore {
             headers: Default::default(),
             status,
@@ -622,19 +627,19 @@ impl Into<ReflectedCore> for Surface {
 }
 
 impl TryFrom<ReflectedCore> for Surface {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
-    fn try_from(core: ReflectedCore) -> Result<Self,SpaceErr> {
+    fn try_from(core: ReflectedCore) -> Result<Self,err::Error> {
         if !core.status.is_success() {
-            Err(SpaceErr::new(core.status.as_u16(), "error"))
+            Err(err!("error"))
         } else {
             match core.body {
                 Substance::Surface(surface) => Ok(surface),
-                substance => Err(format!(
+                substance => Err(err!(
                     "expecting Surface received {}",
                     substance.kind().to_string()
                 )
-                .into()),
+                ),
             }
         }
     }

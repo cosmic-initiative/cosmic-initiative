@@ -4,9 +4,9 @@ use nom::AsBytes;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
+use crate::space::err;
 use crate::space::hyper::Knock;
 use crate::space::wave::{PingCore, PongCore, Wave};
-use crate::SpaceErr;
 
 pub struct PrimitiveFrame {
     pub data: Vec<u8>,
@@ -34,7 +34,7 @@ impl From<String> for PrimitiveFrame {
 }
 
 impl TryInto<String> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<String, Self::Error> {
         Ok(String::from_utf8(self.data)?)
@@ -42,7 +42,7 @@ impl TryInto<String> for PrimitiveFrame {
 }
 
 impl TryInto<semver::Version> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<semver::Version, Self::Error> {
         let data = String::from_utf8(self.data)?;
@@ -64,7 +64,7 @@ pub enum CloseReason {
 }
 
 impl TryInto<PrimitiveFrame> for PingCore {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PrimitiveFrame, Self::Error> {
         let data = bincode::serialize(&self)?;
@@ -73,7 +73,7 @@ impl TryInto<PrimitiveFrame> for PingCore {
 }
 
 impl TryInto<PingCore> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PingCore, Self::Error> {
         Ok(bincode::deserialize(self.data.as_bytes())?)
@@ -81,7 +81,7 @@ impl TryInto<PingCore> for PrimitiveFrame {
 }
 
 impl TryInto<PrimitiveFrame> for PongCore {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PrimitiveFrame, Self::Error> {
         let data = bincode::serialize(&self)?;
@@ -90,7 +90,7 @@ impl TryInto<PrimitiveFrame> for PongCore {
 }
 
 impl TryInto<PongCore> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PongCore, Self::Error> {
         Ok(bincode::deserialize(self.data.as_bytes())?)
@@ -98,7 +98,7 @@ impl TryInto<PongCore> for PrimitiveFrame {
 }
 
 impl TryInto<PrimitiveFrame> for Wave {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PrimitiveFrame, Self::Error> {
         let data = bincode::serialize(&self)?;
@@ -107,7 +107,7 @@ impl TryInto<PrimitiveFrame> for Wave {
 }
 
 impl TryInto<Wave> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<Wave, Self::Error> {
         Ok(bincode::deserialize(self.data.as_bytes())?)
@@ -115,7 +115,7 @@ impl TryInto<Wave> for PrimitiveFrame {
 }
 
 impl TryInto<PrimitiveFrame> for Knock {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<PrimitiveFrame, Self::Error> {
         let data = bincode::serialize(&self)?;
@@ -124,7 +124,7 @@ impl TryInto<PrimitiveFrame> for Knock {
 }
 
 impl TryInto<Knock> for PrimitiveFrame {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<Knock, Self::Error> {
         Ok(bincode::deserialize(self.data.as_bytes())?)

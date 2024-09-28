@@ -1,3 +1,5 @@
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::loc::ToPoint;
 use crate::space::wave::core::cmd::CmdMethod;
 use crate::space::wave::core::CoreBounce;
@@ -10,15 +12,13 @@ use crate::space::wave::{
     Handling, PongCore, RecipientSelector, ReflectedAggregate, ReflectedProto, ReflectedWave,
     Scope, Wave, WaveVariantDef,
 };
-use crate::{Agent, ReflectedCore, SpaceErr, Substance, Surface, ToSubstance};
+use crate::{Agent, ReflectedCore, Substance, Surface, ToSubstance};
 use alloc::borrow::Cow;
 use std::sync::Arc;
-use anyhow::anyhow;
-use crate::space::thiserr::err;
 
 pub trait ExchangeRouter: Send + Sync {
     fn route(&self, wave: Wave);
-    fn exchange(&self, direct: DirectedWave) -> anyhow::Result<ReflectedAggregate>;
+    fn exchange(&self, direct: DirectedWave) -> err::Result<ReflectedAggregate>;
 }
 
 #[derive(Clone)]
@@ -37,7 +37,7 @@ impl ExchangeRouter for SyncRouter {
         self.router.route(wave)
     }
 
-    fn exchange(&self, direct: DirectedWave) -> anyhow::Result<ReflectedAggregate> {
+    fn exchange(&self, direct: DirectedWave) -> err::Result<ReflectedAggregate> {
         self.router.exchange(direct)
     }
 }
@@ -60,7 +60,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub fn direct<D, W>(&self, wave: D) -> anyhow::Result<W>
+    pub fn direct<D, W>(&self, wave: D) -> err::Result<W>
     where
         W: FromReflectedAggregate,
         D: Into<DirectedProto>,
@@ -81,7 +81,7 @@ impl ProtoTransmitter {
         }
     }
 
-    pub fn ping<D>(&self, ping: D) -> anyhow::Result<WaveVariantDef<PongCore>>
+    pub fn ping<D>(&self, ping: D) -> err::Result<WaveVariantDef<PongCore>>
     where
         D: Into<DirectedProto>,
     {
@@ -91,11 +91,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ping) = ping.kind {
             self.direct(ping)
         } else {
-            Err(err("expected DirectedKind::Ping"))?
+            Err(err!("expected DirectedKind::Ping"))?
         }
     }
 
-    pub fn ripple<D>(&self, ripple: D) -> anyhow::Result<Vec<WaveVariantDef<EchoCore>>>
+    pub fn ripple<D>(&self, ripple: D) -> err::Result<Vec<WaveVariantDef<EchoCore>>>
     where
         D: Into<DirectedProto>,
     {
@@ -103,11 +103,11 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Ripple) = ripple.kind {
             self.direct(ripple)
         } else {
-            Err(anyhow!("expected DirectedKind::Ping"))
+            Err(err!("expected DirectedKind::Ping"))
         }
     }
 
-    pub fn signal<D>(&self, signal: D) -> anyhow::Result<()>
+    pub fn signal<D>(&self, signal: D) -> err::Result<()>
     where
         D: Into<DirectedProto>,
     {
@@ -115,7 +115,7 @@ impl ProtoTransmitter {
         if let Some(DirectedKind::Signal) = signal.kind {
             self.direct(signal)
         } else {
-            Err(anyhow!("expected DirectedKind::Ping"))
+            Err(err!("expected DirectedKind::Ping"))
         }
     }
 
@@ -144,7 +144,7 @@ impl ProtoTransmitter {
         self.router.route(wave)
     }
 
-    pub fn reflect<W>(&self, wave: W) -> anyhow::Result<()>
+    pub fn reflect<W>(&self, wave: W) -> err::Result<()>
     where
         W: Into<ReflectedProto>,
     {
@@ -197,7 +197,7 @@ impl<'a, I> InCtx<'a, I> {
 }
 
 pub trait DirectedHandlerSelector {
-    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> anyhow::Result<&dyn DirectedHandler>;
+    fn select<'a>(&self, select: &'a RecipientSelector<'a>) -> err::Result<&dyn DirectedHandler>;
 }
 
 pub trait DirectedHandler: Send + Sync {
@@ -259,7 +259,7 @@ impl DirectedHandlerShell {
 }
 
 impl RootInCtx {
-    pub fn push<'a, I>(&self) -> anyhow::Result<InCtx<I>>
+    pub fn push<'a, I>(&self) -> err::Result<InCtx<I>>
     where
         Substance: ToSubstance<I>,
     {

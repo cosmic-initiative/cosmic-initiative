@@ -13,25 +13,24 @@ use direct::write::{Write, WriteCtx, WriteVar};
 use starlane_parse::{new_span, Trace};
 use starlane_primitive_macros::Autobox;
 
+use crate::space::err;
 use crate::space::parse::error::result;
 use crate::space::parse::{command_line, Env};
 use crate::space::substance::{Bin, ChildSubstance};
 use crate::space::util::ToResolved;
 use crate::space::wave::core::cmd::CmdMethod;
-use crate::{Delete, Select, SpaceErr};
+use crate::{ Delete, Select};
 
 pub mod common {
+    use crate::space::err;
+    use crate::space::err::err;
+    use crate::space::loc::Variable;
+    use crate::space::substance::{Bin, Substance};
+    use serde::{Deserialize, Serialize};
     use std::collections::hash_map::Iter;
     use std::collections::HashMap;
     use std::convert::{TryFrom, TryInto};
     use std::ops::{Deref, DerefMut};
-    use anyhow::anyhow;
-    use serde::{Deserialize, Serialize};
-
-    use crate::space::err::SpaceErr;
-    use crate::space::loc::Variable;
-    use crate::space::parse::sub;
-    use crate::space::substance::{Bin, Substance};
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, strum_macros::Display)]
     pub enum StateSrcVar {
@@ -54,9 +53,9 @@ pub mod common {
             }
         }
 
-        pub fn get_substance(&self) -> anyhow::Result<Substance> {
+        pub fn get_substance(&self) -> err::Result<Substance> {
             match self {
-                StateSrc::None => Err(anyhow!("state has no substance")),
+                StateSrc::None => Err(err!("state has no substance")),
                 StateSrc::Substance(substance) => Ok(*substance.clone()),
             }
         }
@@ -266,7 +265,7 @@ pub mod direct {
         use serde::{Deserialize, Serialize};
 
         use crate::space::command::common::SetProperties;
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::point::{Point, PointCtx, PointVar};
         use crate::space::util::ToResolved;
@@ -282,14 +281,14 @@ pub mod direct {
         }
 
         impl ToResolved<Set> for SetVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Set> {
+            fn to_resolved(self, env: &Env) -> err::Result<Set> {
                 let set: SetCtx = self.to_resolved(env)?;
                 set.to_resolved(env)
             }
         }
 
         impl ToResolved<SetCtx> for SetVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<SetCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<SetCtx> {
                 Ok(SetCtx {
                     point: self.point.to_resolved(env)?,
                     properties: self.properties,
@@ -298,7 +297,7 @@ pub mod direct {
         }
 
         impl ToResolved<Set> for SetCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Set> {
+            fn to_resolved(self, env: &Env) -> err::Result<Set> {
                 Ok(Set {
                     point: self.point.to_resolved(env)?,
                     properties: self.properties,
@@ -308,12 +307,11 @@ pub mod direct {
     }
 
     pub mod get {
-        use serde::{Deserialize, Serialize};
-
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::point::{Point, PointCtx, PointVar};
         use crate::space::util::ToResolved;
+        use serde::{Deserialize, Serialize};
 
         pub type Get = GetDef<Point>;
         pub type GetCtx = GetDef<PointCtx>;
@@ -326,14 +324,14 @@ pub mod direct {
         }
 
         impl ToResolved<Get> for GetVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Get> {
+            fn to_resolved(self, env: &Env) -> err::Result<Get> {
                 let set: GetCtx = self.to_resolved(env)?;
                 set.to_resolved(env)
             }
         }
 
         impl ToResolved<GetCtx> for GetVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<GetCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<GetCtx> {
                 Ok(GetCtx {
                     point: self.point.to_resolved(env)?,
                     op: self.op,
@@ -342,7 +340,7 @@ pub mod direct {
         }
 
         impl ToResolved<Get> for GetCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Get> {
+            fn to_resolved(self, env: &Env) -> err::Result<Get> {
                 Ok(Get {
                     point: self.point.to_resolved(env)?,
                     op: self.op,
@@ -358,18 +356,19 @@ pub mod direct {
     }
 
     pub mod create {
+        use anyhow::Context;
+        use serde::{Deserialize, Serialize};
         use std::convert::TryInto;
         use std::sync::atomic::{AtomicU64, Ordering};
         use std::sync::Arc;
-        use anyhow::{anyhow, Context};
-        use serde::{Deserialize, Serialize};
 
         use crate::space::command::common::{SetProperties, StateSrc, StateSrcVar};
         use crate::space::command::Command;
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
+        use crate::space::err::err;
         use crate::space::kind::{BaseKind, KindParts};
         use crate::space::loc::{PointFactory, ToSurface};
-        use crate::space::parse::{CamelCase, Env, ResolverErr};
+        use crate::space::parse::{CamelCase, Env};
         use crate::space::point::{Point, PointCtx, PointSeg, PointVar};
         use crate::space::selector::SpecificSelector;
         use crate::space::substance::Bin;
@@ -405,14 +404,14 @@ pub mod direct {
         }
 
         impl ToResolved<Template> for TemplateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Template> {
+            fn to_resolved(self, env: &Env) -> err::Result<Template> {
                 let template: TemplateCtx = self.to_resolved(env)?;
                 template.to_resolved(env)
             }
         }
 
         impl ToResolved<TemplateCtx> for TemplateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<TemplateCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<TemplateCtx> {
                 let point: PointTemplateCtx = self.point.to_resolved(env)?;
 
                 let template = TemplateCtx {
@@ -423,7 +422,7 @@ pub mod direct {
             }
         }
         impl ToResolved<Template> for TemplateCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Template> {
+            fn to_resolved(self, env: &Env) -> err::Result<Template> {
                 let point = self.point.to_resolved(env)?;
 
                 let template = Template {
@@ -471,11 +470,11 @@ pub mod direct {
         }
 
         impl TryInto<KindParts> for KindTemplate {
-            type Error = SpaceErr;
+            type Error = err::Error;
 
             fn try_into(self) -> Result<KindParts, Self::Error> {
                 if self.specific.is_some() {
-                    return Err(SpaceErr::String("cannot create a ResourceKind from a specific pattern when using KindTemplate".to_string()));
+                    return Err(err!("cannot create a ResourceKind from a specific pattern when using KindTemplate".to_string()));
                 }
                 Ok(KindParts {
                     base: self.base,
@@ -502,16 +501,16 @@ pub mod direct {
         pub type CreateCtx = CreateDef<PointCtx, StateSrc>;
 
         impl ToResolved<Create> for CreateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Create> {
+            fn to_resolved(self, env: &Env) -> err::Result<Create> {
                 let create: CreateCtx = self.to_resolved(env)?;
                 create.to_resolved(env)
             }
         }
 
         impl ToResolved<CreateCtx> for CreateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<CreateCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<CreateCtx> {
 
-                fn file(env: &Env, name: &String ) -> anyhow::Result<StateSrc> {
+                fn file(env: &Env, name: &String ) -> err::Result<StateSrc> {
                     Ok(StateSrc::Substance(Box::new(Substance::Bin(env.file(name).context(format!("accessing file '{}'",name ))?.content))))
                 }
 
@@ -532,7 +531,7 @@ pub mod direct {
         }
 
         impl ToResolved<Create> for CreateCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Create> {
+            fn to_resolved(self, env: &Env) -> err::Result<Create> {
                 let template = self.template.to_resolved(env)?;
                 Ok(Create {
                     template,
@@ -612,7 +611,7 @@ pub mod direct {
 
         #[async_trait]
         impl PointFactory for PointFactoryU64 {
-            async fn create(&self) -> anyhow::Result<Point> {
+            async fn create(&self) -> err::Result<Point> {
                 let index = self.atomic.fetch_add(1u64, Ordering::Relaxed);
                 self.parent.push(format!("{}{}", self.prefix, index))
             }
@@ -629,7 +628,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplateCtx> for PointTemplateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplateCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<PointTemplateCtx> {
                 let parent = self.parent.to_resolved(env)?;
                 Ok(PointTemplateCtx {
                     parent,
@@ -639,7 +638,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplate> for PointTemplateCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplate> {
+            fn to_resolved(self, env: &Env) -> err::Result<PointTemplate> {
                 let parent = self.parent.to_resolved(env)?;
                 Ok(PointTemplate {
                     parent,
@@ -649,7 +648,7 @@ pub mod direct {
         }
 
         impl ToResolved<PointTemplate> for PointTemplateVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<PointTemplate> {
+            fn to_resolved(self, env: &Env) -> err::Result<PointTemplate> {
                 let ctx: PointTemplateCtx = self.to_resolved(env)?;
                 ctx.to_resolved(env)
             }
@@ -666,15 +665,15 @@ pub mod direct {
     pub mod select {
         use std::convert::{TryFrom, TryInto};
 
-        use serde::{Deserialize, Serialize};
-
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::particle::Stub;
         use crate::space::point::Point;
         use crate::space::selector::{Hop, PointHierarchy, Selector, SelectorDef};
         use crate::space::substance::{MapPattern, Substance, SubstanceList};
         use crate::space::util::ToResolved;
+        use serde::{Deserialize, Serialize};
+        use crate::space::err::err;
 
         #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
         pub enum SelectIntoSubstance {
@@ -683,7 +682,7 @@ pub mod direct {
         }
 
         impl SelectIntoSubstance {
-            pub fn to_primitive(&self, stubs: Vec<Stub>) -> anyhow::Result<SubstanceList> {
+            pub fn to_primitive(&self, stubs: Vec<Stub>) -> err::Result<SubstanceList> {
                 match self {
                     SelectIntoSubstance::Stubs => {
                         let stubs: Vec<Box<Substance>> = stubs
@@ -710,7 +709,7 @@ pub mod direct {
         pub type SelectVar = SelectDef<Hop>;
 
         impl ToResolved<Select> for Select {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Select> {
+            fn to_resolved(self, env: &Env) -> err::Result<Select> {
                 Ok(self)
             }
         }
@@ -752,7 +751,7 @@ pub mod direct {
         }
 
         impl TryInto<SubSelect> for Select {
-            type Error = SpaceErr;
+            type Error = err::Error;
 
             fn try_into(self) -> Result<SubSelect, Self::Error> {
                 if let SelectKind::SubSelect {
@@ -770,7 +769,7 @@ pub mod direct {
                         hierarchy,
                     })
                 } else {
-                    Err(SpaceErr::from_str("Not of kind SubSelector"))
+                    Err(err!("Not of kind SubSelector"))
                 }
             }
         }
@@ -836,7 +835,7 @@ pub mod direct {
         use serde::{Deserialize, Serialize};
 
         use crate::space::command::direct::select::{Select, SelectIntoSubstance};
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::selector::{Hop, SelectorDef};
         use crate::space::util::ToResolved;
@@ -846,7 +845,7 @@ pub mod direct {
         pub type DeleteVar = DeleteDef<Hop>;
 
         impl ToResolved<Delete> for Delete {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Delete> {
+            fn to_resolved(self, env: &Env) -> err::Result<Delete> {
                 Ok(self)
             }
         }
@@ -868,13 +867,12 @@ pub mod direct {
     pub mod write {
         use std::convert::TryInto;
 
-        use serde::{Deserialize, Serialize};
-
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::point::{Point, PointCtx, PointVar};
         use crate::space::substance::Substance;
         use crate::space::util::ToResolved;
+        use serde::{Deserialize, Serialize};
 
         pub type Write = WriteDef<Point>;
         pub type WriteCtx = WriteDef<PointCtx>;
@@ -887,7 +885,7 @@ pub mod direct {
         }
 
         impl ToResolved<WriteCtx> for WriteVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<WriteCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<WriteCtx> {
                 Ok(WriteCtx {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -896,7 +894,7 @@ pub mod direct {
         }
 
         impl ToResolved<Write> for WriteCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Write> {
+            fn to_resolved(self, env: &Env) -> err::Result<Write> {
                 Ok(Write {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -906,13 +904,12 @@ pub mod direct {
     }
 
     pub mod read {
-        use serde::{Deserialize, Serialize};
-
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::parse::Env;
         use crate::space::point::{Point, PointCtx, PointVar};
         use crate::space::substance::Substance;
         use crate::space::util::ToResolved;
+        use serde::{Deserialize, Serialize};
 
         pub type Read = ReadDef<Point>;
         pub type ReadCtx = ReadDef<PointCtx>;
@@ -925,7 +922,7 @@ pub mod direct {
         }
 
         impl ToResolved<ReadCtx> for ReadVar {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<ReadCtx> {
+            fn to_resolved(self, env: &Env) -> err::Result<ReadCtx> {
                 Ok(ReadCtx {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -934,7 +931,7 @@ pub mod direct {
         }
 
         impl ToResolved<Read> for ReadCtx {
-            fn to_resolved(self, env: &Env) -> anyhow::Result<Read> {
+            fn to_resolved(self, env: &Env) -> err::Result<Read> {
                 Ok(Read {
                     point: self.point.to_resolved(env)?,
                     payload: self.payload,
@@ -946,10 +943,9 @@ pub mod direct {
     pub mod query {
         use std::convert::TryInto;
 
-        use serde::{Deserialize, Serialize};
-
-        use crate::space::err::SpaceErr;
+        use crate::space::err;
         use crate::space::selector::PointHierarchy;
+        use serde::{Deserialize, Serialize};
 
         #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
         pub enum Query {
@@ -962,7 +958,7 @@ pub mod direct {
         }
 
         impl TryInto<PointHierarchy> for QueryResult {
-            type Error = SpaceErr;
+            type Error = err::Error;
 
             fn try_into(self) -> Result<PointHierarchy,Self::Error> {
                 match self {
@@ -1029,7 +1025,7 @@ pub enum CommandVar {
 }
 
 impl FromStr for CommandVar {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = new_span(s);
@@ -1038,14 +1034,14 @@ impl FromStr for CommandVar {
 }
 
 impl ToResolved<Command> for CommandVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<Command> {
+    fn to_resolved(self, env: &Env) -> err::Result<Command> {
         let command: CommandCtx = self.to_resolved(env)?;
         command.to_resolved(env)
     }
 }
 
 impl ToResolved<CommandCtx> for CommandVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<CommandCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<CommandCtx> {
         Ok(match self {
             CommandVar::Create(i) => CommandCtx::Create(i.to_resolved(env)?),
             CommandVar::Select(i) => CommandCtx::Select(i.to_resolved(env)?),
@@ -1059,7 +1055,7 @@ impl ToResolved<CommandCtx> for CommandVar {
 }
 
 impl ToResolved<Command> for CommandCtx {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<Command> {
+    fn to_resolved(self, env: &Env) -> err::Result<Command> {
         Ok(match self {
             CommandCtx::Create(i) => Command::Create(i.to_resolved(env)?),
             CommandCtx::Select(i) => Command::Select(i.to_resolved(env)?),

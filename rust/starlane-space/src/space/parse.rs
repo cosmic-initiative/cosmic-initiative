@@ -1,14 +1,8 @@
 pub mod point;
 
+use anyhow::anyhow;
 use core::fmt;
 use core::fmt::Display;
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
-use std::fmt::Formatter;
-use std::ops::{Deref, Range, RangeFrom, RangeTo};
-use std::str::FromStr;
-use std::sync::Arc;
-use anyhow::anyhow;
 //use ariadne::{Label, Report, ReportKind};
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, is_not};
@@ -32,9 +26,15 @@ use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::ExtractContext;
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use thiserror::Error;
 use starlane_parse::{new_span, span_with_extra, Trace};
 use starlane_parse::{trim, tw, Res, Span};
+use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
+use std::fmt::Formatter;
+use std::ops::{Deref, Range, RangeFrom, RangeTo};
+use std::str::FromStr;
+use std::sync::Arc;
+use thiserror::Error;
 
 use crate::space::command::common::{PropertyMod, SetProperties, StateSrcVar};
 use crate::space::command::direct::create::{
@@ -52,8 +52,9 @@ use crate::space::config::bind::{
 };
 use crate::space::config::mechtron::MechtronConfig;
 use crate::space::config::Document;
+use crate::space::err;
 use crate::space::err::report::{Label, Report, ReportKind};
-use crate::space::err::{ParseErrs};
+use crate::space::err::{err, ParseErrs};
 use crate::space::kind::{
     ArtifactSubKind, BaseKind, DatabaseSubKind, FileSubKind, Kind, KindParts, NativeSub, Specific,
     StarSub, UserBaseSubKind,
@@ -108,7 +109,7 @@ impl Parser {
         point_subst(input)
     }
 
-    pub fn consume_point(input: Span) -> anyhow::Result<Point> {
+    pub fn consume_point(input: Span) -> err::Result<Point> {
         let (_, point) = all_consuming(point_subst)(input)?;
         Ok(point)
     }
@@ -539,15 +540,15 @@ pub fn point_non_root_var<I: Span>(input: I) -> Res<I, PointVar> {
     )
 }
 
-pub fn consume_point(input: &str) -> anyhow::Result<Point> {
+pub fn consume_point(input: &str) -> err::Result<Point> {
     consume_point_ctx(input)?.collapse()
 }
 
-pub fn consume_point_ctx(input: &str) -> anyhow::Result<PointCtx> {
+pub fn consume_point_ctx(input: &str) -> err::Result<PointCtx> {
     consume_point_var(input)?.collapse()
 }
 
-pub fn consume_point_var(input: &str) -> anyhow::Result<PointVar> {
+pub fn consume_point_var(input: &str) -> err::Result<PointVar> {
     let span = new_span(input);
     let point = result(context("consume", all_consuming(point_var))(span))?;
     Ok(point)
@@ -704,7 +705,7 @@ pub fn version_point_kind_segment<I: Span>(input: I) -> Res<I, PointKindSeg> {
     })
 }
 
-pub fn consume_hierarchy<I: Span>(input: I) -> anyhow::Result<PointHierarchy> {
+pub fn consume_hierarchy<I: Span>(input: I) -> err::Result<PointHierarchy> {
     let (_, rtn) = all_consuming(point_kind_hierarchy)(input)?;
     Ok(rtn)
 }
@@ -1169,7 +1170,7 @@ impl CamelCase {
 impl FromStr for CamelCase {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
+    fn from_str(s: &str) -> err::Result<Self> {
         result(all_consuming(camel_case)(new_span(s)))
     }
 }
@@ -1244,7 +1245,7 @@ impl<'de> Deserialize<'de> for Domain {
 impl FromStr for Domain {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
+    fn from_str(s: &str) -> err::Result<Self> {
         result(all_consuming(domain)(new_span(s)))
     }
 }
@@ -1295,7 +1296,7 @@ impl<'de> Deserialize<'de> for SkewerCase {
 impl FromStr for SkewerCase {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
+    fn from_str(s: &str) -> err::Result<Self> {
         result(all_consuming(skewer_case)(new_span(s)))
     }
 }
@@ -1869,7 +1870,7 @@ impl FileResolver {
         }
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
+    pub fn file<N: ToString>(&self, name: N) -> err::Result<File> {
         if let Some(content) = self.files.get(&name.to_string()) {
             Ok(File::new(name, content.clone()))
         } else {
@@ -1878,7 +1879,7 @@ impl FileResolver {
     }
 
     /// grab the only file
-    pub fn singleton(&self) -> anyhow::Result<File> {
+    pub fn singleton(&self) -> err::Result<File> {
         if self.files.len() == 1 {
             let i = &mut self.files.iter();
             if let Some((name, content)) = i.next() {
@@ -1930,7 +1931,7 @@ impl Env {
         }
     }
 
-    pub fn push_working<S: ToString>(self, segs: S) -> anyhow::Result<Self> {
+    pub fn push_working<S: ToString>(self, segs: S) -> err::Result<Self> {
         Ok(Self {
             point: self.point.push(segs.to_string())?,
             parent: Some(Box::new(self)),
@@ -1940,21 +1941,21 @@ impl Env {
         })
     }
 
-    pub fn point_or(&self) -> anyhow::Result<Point> {
+    pub fn point_or(&self) -> err::Result<Point> {
         Ok(self.point.clone())
     }
 
-    pub fn pop(self) -> anyhow::Result<Env> {
+    pub fn pop(self) -> err::Result<Env> {
         Ok(*self
             .parent
-            .ok_or::<anyhow::Error>(anyhow!("expected parent scopedVars"))?)
+            .ok_or::<anyhow::Error>(err!("expected parent scopedVars"))?)
     }
 
     pub fn add_var_resolver(&mut self, var_resolver: Arc<dyn VarResolver>) {
         self.var_resolvers.push(var_resolver);
     }
 
-    pub fn val<K: ToString>(&self, var: K) -> anyhow::Result<Substance> {
+    pub fn val<K: ToString>(&self, var: K) -> err::Result<Substance> {
         match self.vars.get(&var.to_string()) {
             None => {
                 if let Ok(val) = self.var_resolvers.val(var.to_string().as_str()) {
@@ -1986,7 +1987,7 @@ impl Env {
         self.vars.insert(key.to_string(), value);
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
+    pub fn file<N: ToString>(&self, name: N) -> err::Result<File> {
         match self.file_resolver.files.get(&name.to_string()) {
             None => {
                 if let Some(parent) = self.parent.as_ref() {
@@ -2063,13 +2064,13 @@ impl Env {
         }
     }
 
-    pub fn point_or(&self) -> anyhow::Result<&Point> {
+    pub fn point_or(&self) -> err::Result<&Point> {
         self.point
             .as_ref()
-            .ok_or(anyhow!("cannot reference working point in this context"))
+            .ok_or(err!("cannot reference working point in this context"))
     }
 
-    pub fn val(&self, var: &str) -> anyhow::Result<String> {
+    pub fn val(&self, var: &str) -> err::Result<String> {
         if let None = self.var_resolver {
             Err(ResolverErr::NotAvailable.into())
         } else {
@@ -2094,7 +2095,7 @@ impl Env {
         }
     }
 
-    pub fn file<N: ToString>(&self, name: N) -> anyhow::Result<File> {
+    pub fn file<N: ToString>(&self, name: N) -> err::Result<File> {
         match &self.file_resolver {
             None => Err(ResolverErr::NotAvailable.into()),
             Some(file_resolver) => file_resolver.file(name),
@@ -2142,7 +2143,7 @@ impl CompositeResolver {
 }
 
 impl VarResolver for CompositeResolver {
-    fn val(&self, var: &str) -> anyhow::Result<Substance> {
+    fn val(&self, var: &str) -> err::Result<Substance> {
         if let Ok(val) = self.scope_resolver.val(var) {
             Ok(val)
         } else if let Ok(val) = self.scope_resolver.val(var) {
@@ -2156,13 +2157,13 @@ impl VarResolver for CompositeResolver {
 }
 
 pub trait CtxResolver {
-    fn working_point(&self) -> anyhow::Result<&Point>;
+    fn working_point(&self) -> err::Result<&Point>;
 }
 
 pub struct PointCtxResolver(Point);
 
 impl CtxResolver for PointCtxResolver {
-    fn working_point(&self) -> anyhow::Result<&Point> {
+    fn working_point(&self) -> err::Result<&Point> {
         Ok(&self.0)
     }
 }
@@ -2174,7 +2175,7 @@ pub enum ResolverErr {
 }
 
 pub trait VarResolver: Send + Sync {
-    fn val(&self, var: &str) -> anyhow::Result<Substance> {
+    fn val(&self, var: &str) -> err::Result<Substance> {
         Err(ResolverErr::NotFound.into())
     }
 }
@@ -2208,7 +2209,7 @@ impl MapResolver {
 }
 
 impl VarResolver for MapResolver {
-    fn val(&self, var: &str) -> anyhow::Result<Substance> {
+    fn val(&self, var: &str) -> err::Result<Substance> {
         self.map
             .get(&var.to_string())
             .cloned()
@@ -2223,14 +2224,14 @@ pub struct RegexCapturesResolver {
 }
 
 impl RegexCapturesResolver {
-    pub fn new(regex: Regex, text: String) -> anyhow::Result<Self> {
-        regex.captures(text.as_str()).ok_or(anyhow!("no regex captures"))?;
+    pub fn new(regex: Regex, text: String) -> err::Result<Self> {
+        regex.captures(text.as_str()).ok_or(err!("no regex captures"))?;
         Ok(Self { regex, text })
     }
 }
 
 impl VarResolver for RegexCapturesResolver {
-    fn val(&self, id: &str) -> anyhow::Result<Substance> {
+    fn val(&self, id: &str) -> err::Result<Substance> {
         let captures = self
             .regex
             .captures(self.text.as_str())
@@ -2262,7 +2263,7 @@ impl MultiVarResolver {
 }
 
 impl VarResolver for MultiVarResolver {
-    fn val(&self, var: &str) -> anyhow::Result<Substance> {
+    fn val(&self, var: &str) -> err::Result<Substance> {
         for resolver in &self.0 {
             match resolver.val(&var.to_string()) {
                 Ok(ok) => return Ok(ok),
@@ -2278,7 +2279,7 @@ pub trait BruteResolver<Resolved>
 where
     Self: Sized + ToResolved<Resolved>,
 {
-    fn brute_resolve(self) -> anyhow::Result<Resolved> {
+    fn brute_resolve(self) -> err::Result<Resolved> {
         let resolver = NoResolver::new().wrap();
         Ok(self.to_resolved(&resolver)?)
     }
@@ -2311,7 +2312,7 @@ where
 }
 
 pub trait SubstParser<T: Sized> {
-    fn parse_string(&self, string: String) -> anyhow::Result<T> {
+    fn parse_string(&self, string: String) -> err::Result<T> {
         let span = new_span(string.as_str());
         let output = result(self.parse_span(span))?;
         Ok(output)
@@ -2981,7 +2982,7 @@ where
 pub fn lex_hierarchy_scope<'a>(
     scope: LexScope<Span<'a>>,
     max_depth: usize,
-) -> anyhow::Result<LexHierarchyScope<'a>> {
+) -> err::Result<LexHierarchyScope<'a>> {
     let mut errs = vec![];
     let scope = lex_child_scopes(scope)?;
     let mut children = vec![];
@@ -3024,7 +3025,7 @@ where
     }
 }
 
-pub fn lex_child_scopes<I: Span>(parent: LexScope<I>) -> anyhow::Result<LexParentScope<I>> {
+pub fn lex_child_scopes<I: Span>(parent: LexScope<I>) -> err::Result<LexParentScope<I>> {
     if parent.selector.children.is_some() {
         let (_, child_selector) = all_consuming(lex_scope_selector)(
             parent
@@ -3156,7 +3157,7 @@ pub fn root_scope<I: Span>(input: I) -> Res<I, LexRootScope<I>> {
     })
 }
 
-pub fn lex_scopes<I: Span>(input: I) -> anyhow::Result<Vec<LexScope<I>>> {
+pub fn lex_scopes<I: Span>(input: I) -> err::Result<Vec<LexScope<I>>> {
     if input.len() == 0 {
         return Ok(vec![]);
     }
@@ -3488,7 +3489,7 @@ pub fn root_scope_selector_name<I: Span>(input: I) -> Res<I, I> {
     .map(|(next, (_, name))| (next, name))
 }
 
-pub fn lex_root_scope<I: Span>(span: I) -> anyhow::Result<LexRootScope<I>> {
+pub fn lex_root_scope<I: Span>(span: I) -> err::Result<LexRootScope<I>> {
     let root_scope = result(delimited(multispace0, root_scope, multispace0)(span))?;
     Ok(root_scope)
 }
@@ -3499,13 +3500,13 @@ pub fn method_kind<I: Span>(input: I) -> Res<I, MethodKind> {
 }
 
 pub mod model {
-    use std::fmt::Write;
-    use std::ops::{Deref, DerefMut};
-    use std::str::FromStr;
     use anyhow::anyhow;
     use regex::Regex;
     use serde::de::Visitor;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::fmt::Write;
+    use std::ops::{Deref, DerefMut};
+    use std::str::FromStr;
 
     use starlane_parse::{new_span, Span, Trace, Tw};
 
@@ -3513,7 +3514,8 @@ pub mod model {
         PipelineStepDef,
         PipelineStopDef,
     };
-    use crate::space::err::{ParseErrs};
+    use crate::space::err;
+    use crate::space::err::{err, ParseErrs};
     use crate::space::loc::Version;
     use crate::space::parse::error::result;
     use crate::space::parse::{
@@ -3628,7 +3630,7 @@ pub mod model {
     }
 
     impl<I: ToString, V: ToString> RootScopeSelector<I, V> {
-        pub fn to_concrete(self) -> anyhow::Result<RootScopeSelector<String, Version>> {
+        pub fn to_concrete(self) -> err::Result<RootScopeSelector<String, Version>> {
             Ok(RootScopeSelector {
                 name: self.name.to_string(),
                 version: Version::from_str(self.version.to_string().as_str())?,
@@ -3654,7 +3656,7 @@ pub mod model {
     }
 
     impl RouteScopeSelector {
-        pub fn new<I: ToString>(path: Option<I>) -> anyhow::Result<Self> {
+        pub fn new<I: ToString>(path: Option<I>) -> err::Result<Self> {
             let path = match path {
                 None => Regex::new(".*")?,
                 Some(path) => Regex::new(path.to_string().as_str())?,
@@ -3667,9 +3669,9 @@ pub mod model {
             })
         }
 
-        pub fn from<I: ToString>(selector: LexScopeSelector<I>) -> anyhow::Result<Self> {
+        pub fn from<I: ToString>(selector: LexScopeSelector<I>) -> err::Result<Self> {
             if selector.name.to_string().as_str() != "Route" {
-                return Err(anyhow!("expecting Route"))
+                return Err(err!("expecting Route"))
             }
             let path = match selector.path {
                 None => None,
@@ -3738,14 +3740,14 @@ pub mod model {
         }
     }
 
-    fn default_path<I: ToString>(path: Option<I>) -> anyhow::Result<Regex> {
+    fn default_path<I: ToString>(path: Option<I>) -> err::Result<Regex> {
         match path {
             None => Ok(Regex::new(".*")?),
             Some(path) => Ok(Regex::new(path.to_string().as_str())?),
         }
     }
     impl WaveScope {
-        pub fn from_scope<I: Span>(scope: LexParentScope<I>) -> anyhow::Result<Self> {
+        pub fn from_scope<I: Span>(scope: LexParentScope<I>) -> err::Result<Self> {
             let selector = MessageScopeSelectorAndFilters::from_selector(scope.selector)?;
             let mut block = vec![];
 
@@ -3769,7 +3771,7 @@ pub mod model {
     }
 
     impl MessageScopeSelectorAndFilters {
-        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> anyhow::Result<Self> {
+        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> err::Result<Self> {
             let filters = selector.filters.clone().to_scope_filters();
             let selector = MessageScopeSelector::from_selector(selector)?;
             Ok(Self { selector, filters })
@@ -3777,7 +3779,7 @@ pub mod model {
     }
 
     impl RouteScopeSelectorAndFilters {
-        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> anyhow::Result<Self> {
+        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> err::Result<Self> {
             let filters = selector.filters.clone().to_scope_filters();
             let selector = RouteScopeSelector::new(selector.path.clone())?;
             Ok(Self { selector, filters })
@@ -3830,7 +3832,7 @@ pub mod model {
         pub fn from_scope<I: Span>(
             parent: &ValuePattern<MethodKind>,
             scope: LexScope<I>,
-        ) -> anyhow::Result<Self> {
+        ) -> err::Result<Self> {
             let selector = MethodScopeSelectorAndFilters::from_selector(parent, scope.selector)?;
             let block = result(pipeline(scope.block.content))?;
             Ok(Self { selector, block })
@@ -3838,7 +3840,7 @@ pub mod model {
     }
 
     impl MessageScopeSelector {
-        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> anyhow::Result<Self> {
+        pub fn from_selector<I: Span>(selector: LexScopeSelector<I>) -> err::Result<Self> {
             let kind = match result(value_pattern(method_kind)(selector.name.clone())) {
                 Ok(kind) => kind,
                 Err(_) => {
@@ -3884,7 +3886,7 @@ pub mod model {
         pub fn from_selector<I: Span>(
             parent: &ValuePattern<MethodKind>,
             selector: LexScopeSelector<I>,
-        ) -> anyhow::Result<Self> {
+        ) -> err::Result<Self> {
             let filters = selector.filters.clone().to_scope_filters();
             let selector = MethodScopeSelector::from_selector(parent, selector)?;
             Ok(Self { selector, filters })
@@ -3895,7 +3897,7 @@ pub mod model {
         pub fn from_selector<I: Span>(
             parent: &ValuePattern<MethodKind>,
             selector: LexScopeSelector<I>,
-        ) -> anyhow::Result<Self> {
+        ) -> err::Result<Self> {
             let name = match parent {
                 ValuePattern::Always => ValuePattern::Always,
                 ValuePattern::Never => ValuePattern::Never,
@@ -4084,14 +4086,14 @@ pub mod model {
     }
 
     impl ToResolved<PipelineSegment> for PipelineSegmentVar {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineSegment> {
+        fn to_resolved(self, env: &Env) -> err::Result<PipelineSegment> {
             let rtn: PipelineSegmentCtx = self.to_resolved(env)?;
             rtn.to_resolved(env)
         }
     }
 
     impl ToResolved<PipelineSegment> for PipelineSegmentCtx {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineSegment> {
+        fn to_resolved(self, env: &Env) -> err::Result<PipelineSegment> {
             Ok(PipelineSegment {
                 step: self.step.to_resolved(env)?,
                 stop: self.stop.to_resolved(env)?,
@@ -4100,7 +4102,7 @@ pub mod model {
     }
 
     impl ToResolved<PipelineSegmentCtx> for PipelineSegmentVar {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineSegmentCtx> {
+        fn to_resolved(self, env: &Env) -> err::Result<PipelineSegmentCtx> {
             Ok(PipelineSegmentCtx {
                 step: self.step.to_resolved(env)?,
                 stop: self.stop.to_resolved(env)?,
@@ -4110,7 +4112,7 @@ pub mod model {
 
     /*
     impl CtxSubst<PipelineSegment> for PipelineSegmentCtx{
-        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> anyhow::Result<PipelineSegment> {
+        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> err::Result<PipelineSegment> {
             let mut errs = vec![];
             let step = match self.step.resolve_ctx(resolver) {
                 Ok(step) => Some(step),
@@ -4162,7 +4164,7 @@ pub mod model {
     impl<I: Span> TryFrom<LexParentScope<I>> for RouteScope {
         type Error = anyhow::Error;
 
-        fn try_from(scope: LexParentScope<I>) -> anyhow::Result<Self> {
+        fn try_from(scope: LexParentScope<I>) -> err::Result<Self> {
             let mut errs = vec![];
             let mut message_scopes = vec![];
             let route_selector = RouteScopeSelectorAndFilters::from_selector(scope.selector)?;
@@ -4185,7 +4187,7 @@ pub mod model {
             } else {
 
                 //Err(ParseErrs::fold(errs).into())
-                Err(anyhow!("parse errors cannot currently be folded..."))
+                Err(err!("parse errors cannot currently be folded..."))
             }
         }
     }
@@ -4194,7 +4196,7 @@ pub mod model {
     impl<I: Span> LexScopeSelectorAndFilters<I> {
         pub fn to_value_pattern_scope_selector(
             self,
-        ) -> anyhow::Result<ValuePatternScopeSelectorAndFilters> {
+        ) -> err::Result<ValuePatternScopeSelectorAndFilters> {
             Ok(ValuePatternScopeSelectorAndFilters {
                 selector: self.selector.to_value_pattern_scope_selector()?,
                 filters: self.filters.to_scope_filters(),
@@ -4224,7 +4226,7 @@ pub mod model {
     pub type PipelineVar = PipelineDef<PipelineSegmentVar>;
 
     impl ToResolved<Pipeline> for PipelineCtx {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<Pipeline> {
+        fn to_resolved(self, env: &Env) -> err::Result<Pipeline> {
             let mut segments = vec![];
             for segment in self.segments.into_iter() {
                 segments.push(segment.to_resolved(env)?);
@@ -4235,7 +4237,7 @@ pub mod model {
     }
 
     impl ToResolved<PipelineCtx> for PipelineVar {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineCtx> {
+        fn to_resolved(self, env: &Env) -> err::Result<PipelineCtx> {
             let mut segments = vec![];
             for segment in self.segments.into_iter() {
                 segments.push(segment.to_resolved(env)?);
@@ -4247,7 +4249,7 @@ pub mod model {
 
     /*
     impl CtxSubst<Pipeline> for PipelineCtx {
-        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> anyhow::Result<Pipeline> {
+        fn resolve_ctx(self, resolver: &dyn CtxResolver) -> err::Result<Pipeline> {
             let mut errs = vec![];
             let mut segments = vec![];
             for segment in self.segments {
@@ -4303,7 +4305,7 @@ pub mod model {
 
     /*
     impl <I:Span> VarSubst<PipelineCtx> for VarPipeline<I> {
-        fn resolve_vars(self, resolver: &dyn VarResolver) -> anyhow::Result<PipelineCtx> {
+        fn resolve_vars(self, resolver: &dyn VarResolver) -> err::Result<PipelineCtx> {
             let mut pipeline = PipelineCtx::new();
             let mut errs = vec![];
             for segment in self.segments {
@@ -4329,7 +4331,7 @@ pub mod model {
 
     /*
     impl <I:Span> VarSubst<PipelineSegmentCtx> for VarPipelineSegment<I> {
-        fn resolve_vars(self, resolver: &dyn VarResolver) -> anyhow::Result<PipelineSegmentCtx> {
+        fn resolve_vars(self, resolver: &dyn VarResolver) -> err::Result<PipelineSegmentCtx> {
             unimplemented!()
             /*
             let mut errs = vec![];
@@ -4549,7 +4551,7 @@ pub mod model {
             }
         }
 
-        pub fn error_message<I: Span>(span: &I, context: &str) -> anyhow::Result<&'static str> {
+        pub fn error_message<I: Span>(span: &I, context: &str) -> err::Result<&'static str> {
             if Self::Curly.open_context() == context {
                 Ok("expecting '{' (open scope block)")
             } else if Self::Parens.open_context() == context {
@@ -4575,7 +4577,7 @@ pub mod model {
             } else if Self::Square.unpaired_closing_scope() == context {
                 Ok("closing scope without an opening scope")
             } else {
-                Err(anyhow!("could not determine error"))
+                Err(err!("could not determine error"))
             }
         }
 
@@ -4714,7 +4716,7 @@ pub mod model {
     }
 
     pub trait VarParser<O> {
-        fn parse<I: Span>(input: I) -> anyhow::Result<O>;
+        fn parse<I: Span>(input: I) -> err::Result<O>;
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -4724,7 +4726,7 @@ pub mod model {
     }
 
     impl Subst<Tw<String>> {
-        pub fn new(path: &str) -> anyhow::Result<Self> {
+        pub fn new(path: &str) -> err::Result<Self> {
             let path = result(crate::space::parse::subst_path(new_span(path)))?;
             Ok(path.stringify())
         }
@@ -4765,7 +4767,7 @@ pub mod model {
     }
 
     impl ToResolved<String> for Subst<Tw<String>> {
-        fn to_resolved(self, env: &Env) -> anyhow::Result<String> {
+        fn to_resolved(self, env: &Env) -> err::Result<String> {
             let mut rtn = String::new();
             let mut errs = vec![];
             for chunk in self.chunks {
@@ -4801,8 +4803,8 @@ pub mod model {
 }
 
 pub mod error {
-    use core::str::FromStr;
     use anyhow::anyhow;
+    use core::str::FromStr;
     //    use ariadne::Report;
     //    use ariadne::{Label, ReportKind, Source};
     use nom::branch::alt;
@@ -4819,13 +4821,13 @@ pub mod error {
     use regex::{Error, Regex};
 
     use starlane_parse::{len, Span};
-
+    use crate::space::err;
     use crate::space::err::report::{Label, Report, ReportKind};
-    use crate::space::err::{ParseErrs};
+    use crate::space::err::{err, ParseErrs};
     use crate::space::parse::model::NestedBlockKind;
     use crate::space::parse::nospace1;
 
-    pub fn result<I: Span, R>(result: anyhow::Result<(I, R), Err<ErrorTree<I>>>) -> anyhow::Result<R> {
+    pub fn result<I: Span, R>(result: err::Result<(I, R), Err<ErrorTree<I>>>) -> err::Result<R> {
         match result {
             Ok((_, e)) => Ok(e),
             Err(err) => Err(find_parse_err(&err).into()),
@@ -4834,8 +4836,8 @@ pub mod error {
 
     /*
     pub fn just_msg<R, E: From<String>>(
-        result: anyhow::Result<(Span, R)>,
-    ) -> anyhow::Result<R> {
+        result: err::Result<(Span, R)>,
+    ) -> err::Result<R> {
         match result {
             Ok((_, e)) => Ok(e),
             Err(err) => match find(&err) {
@@ -5009,7 +5011,7 @@ pub mod error {
     }
     pub fn find_parse_err<I: Span>(err: &Err<ErrorTree<I>>) -> anyhow::Error {
         match err {
-            Err::Incomplete(_) => anyhow!("internal parser error: Incomplete"),
+            Err::Incomplete(_) => err!("internal parser error: Incomplete"),
             Err::Error(err) => find_tree(err),
             Err::Failure(err) => find_tree(err),
         }
@@ -5028,7 +5030,7 @@ pub mod error {
                         StackContext::Context(context) => {
                             create_err_report(*context, span.clone())
                         }
-                        _ => anyhow!("internal parser error: could not find a parse context in order to generate a useful error message")
+                        _ => err!("internal parser error: could not find a parse context in order to generate a useful error message")
                     }
             }
             ErrorTree::Base { location, kind } => create_err_report("eof", location.clone()),
@@ -5037,26 +5039,26 @@ pub mod error {
                     return find_tree(alt);
                 }
 
-                anyhow!("internal parser error: ErrorTree::Alt could not find a suitable context error in the various alts")
+                err!("internal parser error: ErrorTree::Alt could not find a suitable context error in the various alts")
             }
         }
     }
 
     pub fn first_context<I: Span>(
         orig: Err<ErrorTree<I>>,
-    ) -> anyhow::Result<(String, Err<ErrorTree<I>>)> {
+    ) -> err::Result<(String, Err<ErrorTree<I>>)> {
         match &orig {
             Err::Error(err) => match err {
                 ErrorTree::Stack { base, contexts } => {
                     let (_, context) = contexts.first().unwrap();
                     match context {
                         StackContext::Context(context) => Ok((context.to_string(), orig)),
-                        _ => Err(anyhow!("first context err")),
+                        _ => Err(err!("first context err")),
                     }
                 }
-                _ => Err(anyhow!("first context err")),
+                _ => Err(err!("first context err")),
             },
-            _ => Err(anyhow!("first context err")),
+            _ => Err(err!("first context err")),
         }
     }
 }
@@ -5488,7 +5490,7 @@ pub fn delim_kind_parts<I: Span>(input: I) -> Res<I, KindParts> {
     delimited(tag("<"), kind_parts, tag(">"))(input)
 }
 
-pub fn consume_kind<I: Span>(input: I) -> anyhow::Result<KindParts> {
+pub fn consume_kind<I: Span>(input: I) -> err::Result<KindParts> {
     let (_, kind_parts) = all_consuming(kind_parts)(input)?;
 
     Ok(kind_parts.try_into()?)
@@ -6548,7 +6550,7 @@ where
 }
 
 /*
-pub fn strip<I:Span>(input: Span) -> anyhow::Result<Span>
+pub fn strip<I:Span>(input: Span) -> err::Result<Span>
 {
     let (_, stripped) = strip_comments(input.clone())?;
     let span = LocatedSpan::new_extra(stripped.as_str().clone(), Arc::new(input.to_string()));
@@ -6587,23 +6589,23 @@ where
     .map(|(next, comment)| (next, TextType::Comment(comment)))
 }
 
-pub fn bind_config(src: &str) -> anyhow::Result<BindConfig> {
+pub fn bind_config(src: &str) -> err::Result<BindConfig> {
     let document = doc(src)?;
     match document {
         Document::BindConfig(bind_config) => Ok(bind_config),
-        _ => Err(anyhow!("not a bind config")),
+        _ => Err(err!("not a bind config")),
     }
 }
 
-pub fn mechtron_config(src: &str) -> anyhow::Result<MechtronConfig> {
+pub fn mechtron_config(src: &str) -> err::Result<MechtronConfig> {
     let document = doc(src)?;
     match document {
         Document::MechtronConfig(mechtron_config) => Ok(mechtron_config),
-        _ => Err(anyhow!("not a Mechtron config")),
+        _ => Err(err!("not a Mechtron config")),
     }
 }
 
-pub fn doc(src: &str) -> anyhow::Result<Document> {
+pub fn doc(src: &str) -> err::Result<Document> {
     let src = src.to_string();
     let (next, stripped) = strip_comments(new_span(src.as_str()))?;
     let span = span_with_extra(stripped.as_str(), Arc::new(src.to_string()));
@@ -6732,7 +6734,7 @@ pub struct Assignment {
     pub value: String,
 }
 
-fn semantic_mechtron_scope<I: Span>(scope: LexScope<I>) -> anyhow::Result<MechtronScope> {
+fn semantic_mechtron_scope<I: Span>(scope: LexScope<I>) -> err::Result<MechtronScope> {
     let selector_name = scope.selector.name.to_string();
     match selector_name.as_str() {
         "Wasm" => {
@@ -6759,7 +6761,7 @@ fn semantic_mechtron_scope<I: Span>(scope: LexScope<I>) -> anyhow::Result<Mechtr
     }
 }
 
-fn parse_bind_config<I: Span>(input: I) -> anyhow::Result<BindConfig> {
+fn parse_bind_config<I: Span>(input: I) -> err::Result<BindConfig> {
     let lex_scopes = lex_scopes(input)?;
     let mut scopes = vec![];
     let mut errors = vec![];
@@ -6774,7 +6776,7 @@ fn parse_bind_config<I: Span>(input: I) -> anyhow::Result<BindConfig> {
     }
 
     if !errors.is_empty() {
-        return Err(anyhow!("parse errors not presently supported."));
+        return Err(err!("parse errors not presently supported."));
 //        let errors = ParseErrs::fold(errors);
 //        return Err(errors.into());
     }
@@ -6783,7 +6785,7 @@ fn parse_bind_config<I: Span>(input: I) -> anyhow::Result<BindConfig> {
     Ok(config)
 }
 
-fn semantic_bind_scope<I: Span>(scope: LexScope<I>) -> anyhow::Result<BindScope> {
+fn semantic_bind_scope<I: Span>(scope: LexScope<I>) -> err::Result<BindScope> {
     let selector_name = scope.selector.name.to_string();
     match selector_name.as_str() {
         "Route" => {
@@ -6811,7 +6813,7 @@ fn semantic_bind_scope<I: Span>(scope: LexScope<I>) -> anyhow::Result<BindScope>
     }
 }
 
-fn parse_bind_pipelines_scope<I: Span>(input: I) -> anyhow::Result<Spanned<I, BindScopeKind>> {
+fn parse_bind_pipelines_scope<I: Span>(input: I) -> err::Result<Spanned<I, BindScopeKind>> {
     unimplemented!()
     /*
     let (next, lex_scopes) = lex_scopes(input.clone())?;
@@ -7063,13 +7065,13 @@ pub fn var_chunk<I: Span>(input: I) -> Res<I, Chunk<I>> {
     .map(|(next, variable_name)| (next, Chunk::Var(variable_name)))
 }
 /*
-pub fn unwrap_route_selector(input: &str ) -> anyhow::Result<RouteSelector> {
+pub fn unwrap_route_selector(input: &str ) -> err::Result<RouteSelector> {
     let input = new_span(input);
     let input = result(unwrap_block( BlockKind::Nested(NestedBlockKind::Parens),input))?;
 }
 
  */
-pub fn route_attribute(input: &str) -> anyhow::Result<RouteSelector> {
+pub fn route_attribute(input: &str) -> err::Result<RouteSelector> {
     let input = new_span(input);
     let (_, (_, lex_route)) = result(pair(
         tag("#"),
@@ -7091,7 +7093,7 @@ pub fn route_attribute(input: &str) -> anyhow::Result<RouteSelector> {
     route_selector(lex_route)
 }
 
-pub fn route_attribute_value(input: &str) -> anyhow::Result<RouteSelector> {
+pub fn route_attribute_value(input: &str) -> err::Result<RouteSelector> {
     let input = new_span(input);
     let lex_route = result(unwrap_block(
         BlockKind::Delimited(DelimitedBlockKind::DoubleQuotes),
@@ -7119,7 +7121,7 @@ pub fn topic<I: Span>(input: I) -> Res<I, ValuePattern<Topic>> {
 
  */
 
-pub fn route_selector<I: Span>(input: I) -> anyhow::Result<RouteSelector> {
+pub fn route_selector<I: Span>(input: I) -> err::Result<RouteSelector> {
     let (next, (topic, lex_route)) = match pair(
         opt(terminated(
             unwrap_block(
@@ -7339,7 +7341,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_create_command() -> anyhow::Result<()> {
+    pub fn test_create_command() -> err::Result<()> {
         let command = util::log(result(command_line(new_span("create localhost<Space>"))))?;
         let env = Env::new(Point::root());
         let command: Command = util::log(command.to_resolved(&env))?;
@@ -7347,7 +7349,7 @@ Mechtron(version=1.0.0) {
     }
 
     //    #[test]
-    pub fn test_command_line_err() -> anyhow::Result<()> {
+    pub fn test_command_line_err() -> err::Result<()> {
         let command = util::log(result(command_line(new_span("create localhost<bad>"))))?;
         let env = Env::new(Point::root());
         let command: Command = util::log(command.to_resolved(&env))?;
@@ -7355,7 +7357,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_template() -> anyhow::Result<()> {
+    pub fn test_template() -> err::Result<()> {
         let t = util::log(result(all_consuming(template)(new_span(
             "localhost<Space>",
         ))))?;
@@ -7384,7 +7386,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_point_template() -> anyhow::Result<()> {
+    pub fn test_point_template() -> err::Result<()> {
         assert!(mesh_eos(new_span(":")).is_ok());
         assert!(mesh_eos(new_span("%")).is_ok());
         assert!(mesh_eos(new_span("x")).is_err());
@@ -7405,7 +7407,7 @@ Mechtron(version=1.0.0) {
     }
 
     //    #[test]
-    pub fn test_point_var() -> anyhow::Result<()> {
+    pub fn test_point_var() -> err::Result<()> {
         util::log(result(all_consuming(point_var)(new_span(
             "[hub]::my-domain.com:${name}:base",
         ))))?;
@@ -7506,7 +7508,7 @@ Mechtron(version=1.0.0) {
                 let point = log(consume_point_var("../../hello") )?;
         //        let point: Point = log(point.to_resolved(&resolver))?;
           //      println!("point.to_string(): {}", point.to_string());
-                let _: anyhow::Result<Point> = log(log(result(all_consuming(point_var)(new_span(
+                let _: err::Result<Point> = log(log(result(all_consuming(point_var)(new_span(
                     "${not-supported}::my-domain.com:1.0.0:/${dorko}/x/",
                 )))?
                     .to_resolved(&env)));
@@ -7516,7 +7518,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_point() -> anyhow::Result<()> {
+    pub fn test_point() -> err::Result<()> {
         util::log(
             result(all_consuming(point_var)(new_span(
                 "[hub]::my-domain.com:name:base",
@@ -7540,7 +7542,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_simple_point_var() -> anyhow::Result<()> {
+    pub fn test_simple_point_var() -> err::Result<()> {
         /*
         let point = util::log(result(point_var(new_span("localhost:base"))))?;
         println!("point '{}'", point.to_string());
@@ -7575,7 +7577,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_lex_block() -> anyhow::Result<()> {
+    pub fn test_lex_block() -> err::Result<()> {
         let esc = result(escaped(anychar, '\\', anychar)(new_span("\\}")))?;
         //println!("esc: {}", esc);
         util::log(result(all_consuming(lex_block(BlockKind::Nested(
@@ -7598,12 +7600,12 @@ Mechtron(version=1.0.0) {
         Ok(())
     }
     #[test]
-    pub fn test_path_regex2() -> anyhow::Result<()> {
+    pub fn test_path_regex2() -> err::Result<()> {
         util::log(result(path_regex(new_span("/xyz"))))?;
         Ok(())
     }
     #[test]
-    pub fn test_bind_config() -> anyhow::Result<()> {
+    pub fn test_bind_config() -> err::Result<()> {
         let bind_config_str = r#"Bind(version=1.0.0)  { Route<Http> -> { <Get> -> ((*)) => &; } }
         "#;
 
@@ -7694,7 +7696,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_pipeline_segment() -> anyhow::Result<()> {
+    pub fn test_pipeline_segment() -> err::Result<()> {
         util::log(result(pipeline_segment(new_span("-> localhost"))))?;
         assert!(util::log(result(pipeline_segment(new_span("->")))).is_err());
         assert!(util::log(result(pipeline_segment(new_span("localhost")))).is_err());
@@ -7702,7 +7704,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_pipeline_stop() -> anyhow::Result<()> {
+    pub fn test_pipeline_stop() -> err::Result<()> {
         util::log(result(space_chars(new_span("localhost"))))?;
         util::log(result(space_no_dupe_dots(new_span("localhost"))))?;
 
@@ -7722,13 +7724,13 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_pipeline() -> anyhow::Result<()> {
+    pub fn test_pipeline() -> err::Result<()> {
         util::log(result(pipeline(new_span("-> localhost => &"))))?;
         Ok(())
     }
 
     #[test]
-    pub fn test_pipeline_step() -> anyhow::Result<()> {
+    pub fn test_pipeline_step() -> err::Result<()> {
         util::log(result(pipeline_step_var(new_span("->"))))?;
         util::log(result(pipeline_step_var(new_span("-[ Text ]->"))))?;
         util::log(result(pipeline_step_var(new_span("-[ Text ]=>"))))?;
@@ -7741,7 +7743,7 @@ Mechtron(version=1.0.0) {
     }
 
     #[test]
-    pub fn test_rough_bind_config() -> anyhow::Result<()> {
+    pub fn test_rough_bind_config() -> err::Result<()> {
         let unknown_config_kind = r#"
 Unknown(version=1.0.0) # mem unknown config kind
 {
@@ -7790,7 +7792,7 @@ Bind(version=1.0.0)
     }
 
     #[test]
-    pub fn test_remove_comments() -> anyhow::Result<()> {
+    pub fn test_remove_comments() -> err::Result<()> {
         let bind_str = r#"
 # this is a mem of comments
 Bind(version=1.0.0)->
@@ -7819,7 +7821,7 @@ Bind(version=1.0.0)->
     }
 
     #[test]
-    pub fn test_version() -> anyhow::Result<()> {
+    pub fn test_version() -> err::Result<()> {
         rec_version(new_span("1.0.0"))?;
         rec_version(new_span("1.0.0-alpha"))?;
         version(new_span("1.0.0-alpha"))?;
@@ -7827,7 +7829,7 @@ Bind(version=1.0.0)->
         Ok(())
     }
     #[test]
-    pub fn test_rough_block() -> anyhow::Result<()> {
+    pub fn test_rough_block() -> err::Result<()> {
         result(all_consuming(lex_nested_block(NestedBlockKind::Curly))(
             new_span("{  }"),
         ))?;
@@ -7873,7 +7875,7 @@ Hello my friend
     }
 
     #[test]
-    pub fn test_block() -> anyhow::Result<()> {
+    pub fn test_block() -> err::Result<()> {
         util::log(result(lex_nested_block(NestedBlockKind::Curly)(new_span(
             "{ <Get> -> localhost; }    ",
         ))))?;
@@ -7915,7 +7917,7 @@ Hello my friend
     }
 
     //#[test]
-    pub fn test_root_scope_selector() -> anyhow::Result<()> {
+    pub fn test_root_scope_selector() -> err::Result<()> {
         assert!(
             (result(root_scope_selector(new_span(
                 r#"
@@ -7965,7 +7967,7 @@ Hello my friend
     }
 
     //    #[test]
-    pub fn test_scope_filter() -> anyhow::Result<()> {
+    pub fn test_scope_filter() -> err::Result<()> {
         result(scope_filter(new_span("(auth)")))?;
         result(scope_filter(new_span("(auth )")))?;
         result(scope_filter(new_span("(auth hello)")))?;
@@ -8051,7 +8053,7 @@ Hello my friend
         assert!(next_stacked_name(new_span("<*x<Ext>>")).is_err());
     }
     #[test]
-    pub fn test_lex_scope2() -> anyhow::Result<()> {
+    pub fn test_lex_scope2() -> err::Result<()> {
         /*        let scope = log(result(lex_scopes(create_span(
                    "  Get -> {}\n\nPut -> {}   ",
                ))))?;
@@ -8069,7 +8071,7 @@ Hello my friend
     }
 
     #[test]
-    pub fn test_lex_scope() -> anyhow::Result<()> {
+    pub fn test_lex_scope() -> err::Result<()> {
         let pipes = util::log(result(lex_scope(new_span("Pipes -> {}")))).unwrap();
 
         //        let pipes = log(result(lex_scope(create_span("Pipes {}"))));
@@ -8290,7 +8292,7 @@ Hello my friend
     }
 
     //#[test]
-    pub fn test_root_and_subscope_phases() -> anyhow::Result<()> {
+    pub fn test_root_and_subscope_phases() -> err::Result<()> {
         let config = r#"
 Bind(version=1.2.3)-> {
    Route -> {
@@ -8312,7 +8314,7 @@ Bind(version=1.2.3)-> {
         Ok(())
     }
     #[test]
-    pub fn test_variable_name() -> anyhow::Result<()> {
+    pub fn test_variable_name() -> err::Result<()> {
         assert_eq!(
             "v".to_string(),
             util::log(result(lowercase1(new_span("v"))))?.to_string()
@@ -8327,7 +8329,7 @@ Bind(version=1.2.3)-> {
     }
 
     //#[test]
-    pub fn test_subst() -> anyhow::Result<()> {
+    pub fn test_subst() -> err::Result<()> {
         /*
         #[derive(Clone)]
         pub struct SomeParser();
@@ -8539,7 +8541,7 @@ pub struct KindLex {
 impl TryInto<KindParts> for KindLex {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> anyhow::Result<KindParts> {
+    fn try_into(self) -> err::Result<KindParts> {
         Ok(KindParts {
             base: BaseKind::try_from(self.base)?,
             sub: self.sub,
@@ -8581,9 +8583,9 @@ pub mod cmd_test {
 
     /*
     #[mem]
-    pub async fn test2() -> anyhow::Result<()>{
+    pub async fn test2() -> err::Result<()>{
         let input = "? xreate localhost<Space>";
-        let x: anyhow::Result<CommandOp> = final_parser(command)(input);
+        let x: err::Result<CommandOp> = final_parser(command)(input);
         match x {
             Ok(_) => {}
             Err(err) => {
@@ -8598,23 +8600,23 @@ pub mod cmd_test {
      */
 
     //    #[test]
-    pub fn test() -> anyhow::Result<()> {
+    pub fn test() -> err::Result<()> {
         let input = "xreate? localhost<Space>";
         match command(new_span(input)) {
             Ok(_) => {}
             Err(nom::Err::Error(e)) => {
                 eprintln!("yikes!");
-                return Err(anyhow!("could not find context"));
+                return Err(err!("could not find context"));
             }
             Err(e) => {
-                return Err(anyhow!("some err"));
+                return Err(err!("some err"));
             }
         }
         Ok(())
     }
 
     #[test]
-    pub fn test_kind() -> anyhow::Result<()> {
+    pub fn test_kind() -> err::Result<()> {
         let input = "create localhost:users<UserBase<Keycloak>>";
         let (_, command) = command(new_span(input))?;
         match command {
@@ -8632,7 +8634,7 @@ pub mod cmd_test {
     }
 
     #[test]
-    pub fn test_script() -> anyhow::Result<()> {
+    pub fn test_script() -> err::Result<()> {
         let input = r#" create? localhost<Space>;
  Xcrete localhost:repo<Base<Repo>>;
  create? localhost:repo:tutorial<ArtifactBundleSeries>;
@@ -8645,14 +8647,14 @@ pub mod cmd_test {
     }
 
     #[test]
-    pub fn test_publish() -> anyhow::Result<()> {
+    pub fn test_publish() -> err::Result<()> {
         let input = r#"publish ^[ bundle.zip ]-> localhost:repo:tutorial:1.0.0"#;
         publish_command(new_span(input))?;
         Ok(())
     }
 
     #[test]
-    pub fn test_upload_blocks() -> anyhow::Result<()> {
+    pub fn test_upload_blocks() -> err::Result<()> {
         let input = r#"publish ^[ bundle.zip ]-> localhost:repo:tutorial:1.0.0"#;
         let blocks = result(upload_blocks(new_span(input)))?;
         assert_eq!(1, blocks.len());
@@ -8673,7 +8675,7 @@ pub mod cmd_test {
     }
 
     #[test]
-    pub fn test_create_kind() -> anyhow::Result<()> {
+    pub fn test_create_kind() -> err::Result<()> {
         let input = r#"create localhost:repo:tutorial:1.0.0<Repo>"#;
         let mut command = result(create_command(new_span(input)))?;
         let command = command.collapse()?;
@@ -8692,7 +8694,7 @@ pub mod cmd_test {
     }
 
     #[test]
-    pub fn test_create_properties() -> anyhow::Result<()> {
+    pub fn test_create_properties() -> err::Result<()> {
         let input = r#"create localhost:repo:tutorial:1.0.0<Repo>{ +config=the:cool:property }"#;
         let mut command = result(create_command(new_span(input)))?;
         let command = command.collapse()?;

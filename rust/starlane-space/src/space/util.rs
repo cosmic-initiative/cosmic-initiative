@@ -1,4 +1,3 @@
-use crate::space::err::SpaceErr;
 use crate::space::loc::Uuid;
 use crate::space::parse::Env;
 use crate::space::wasm::{starlane_timestamp, starlane_uuid, Timestamp};
@@ -290,9 +289,9 @@ where
 }
 
 impl<T> ValuePattern<T> {
-    pub fn modify<X, F>(self, mut f: F) -> anyhow::Result<ValuePattern<X>>
+    pub fn modify<X, F>(self, mut f: F) -> err::Result<ValuePattern<X>>
     where
-        F: FnMut(T) -> anyhow::Result<X>,
+        F: FnMut(T) -> err::Result<X>,
     {
         Ok(match self {
             ValuePattern::Always => ValuePattern::Always,
@@ -400,14 +399,14 @@ impl ValueMatcher<String> for StringMatcher {
 }
 
 pub trait Convert<A> {
-    fn convert(self) -> anyhow::Result<A>;
+    fn convert(self) -> err::Result<A>;
 }
 
 pub trait ConvertFrom<A>
 where
     Self: Sized,
 {
-    fn convert_from(a: A) -> anyhow::Result<Self>;
+    fn convert_from(a: A) -> err::Result<Self>;
 }
 
 pub fn uuid() -> Uuid {
@@ -422,11 +421,11 @@ pub trait ToResolved<R>
 where
     Self: Sized,
 {
-    fn collapse(self) -> anyhow::Result<R> {
+    fn collapse(self) -> err::Result<R> {
         self.to_resolved(&Env::no_point())
     }
 
-    fn to_resolved(self, env: &Env) -> anyhow::Result<R>;
+    fn to_resolved(self, env: &Env) -> err::Result<R>;
 }
 
 pub fn log<R,E>(result: Result<R,E>) -> Result<R,E> {

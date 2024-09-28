@@ -1,6 +1,7 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
-use crate::space::err::SpaceErr;
+use crate::space::err::Error;
 use crate::space::substance::{FormErrs, Substance};
 use crate::space::wave::core::{DirectedCore, HeaderMap, Method, ReflectedCore};
 use url::Url;
@@ -67,9 +68,9 @@ impl Into<DirectedCore> for HttpRequest {
 }
 
 impl TryFrom<DirectedCore> for HttpRequest {
-    type Error = SpaceErr;
+    type Error = anyhow::Error;
 
-    fn try_from(core: DirectedCore) -> Result<Self, Self::Error> {
+    fn try_from(core: DirectedCore) -> err::Result<Self> {
         if let Method::Http(method) = core.method {
             Ok(Self {
                 method: method.into(),
@@ -78,7 +79,7 @@ impl TryFrom<DirectedCore> for HttpRequest {
                 body: core.body,
             })
         } else {
-            Err("expected Http".into())
+            Err(err!("expected Http"))
         }
     }
 }
@@ -88,7 +89,7 @@ pub struct StatusCode {
 }
 
 impl StatusCode {
-    pub fn from_u16(code: u16) -> Result<Self, SpaceErr> {
+    pub fn from_u16(code: u16) -> Result<Self, err::Error> {
         Ok(Self { code })
     }
 

@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 
 use starlane_parse::new_span;
 
-use crate::space::err::SpaceErr;
 use crate::space::parse::error::result;
 use crate::space::parse::{particle_perms, permissions, permissions_mask, privilege};
 use crate::space::point::Point;
@@ -66,7 +65,7 @@ impl Access {
         }
     }
 
-    pub fn check_privilege(&self, privilege: &str) -> anyhow::Result<()> {
+    pub fn check_privilege(&self, privilege: &str) -> err::Result<()> {
         match self {
             Access::Super => Ok(()),
             Access::Owner => Ok(()),
@@ -218,7 +217,7 @@ impl ToString for Privilege {
 }
 
 impl FromStr for Privilege {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let span = new_span(s);
@@ -281,7 +280,7 @@ pub struct PermissionsMask {
 }
 
 impl FromStr for PermissionsMask {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = new_span(s);
@@ -305,7 +304,7 @@ pub struct Permissions {
 }
 
 impl FromStr for Permissions {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         result(permissions(new_span(s)))
@@ -445,7 +444,7 @@ impl ParticlePerms {
 }
 
 impl FromStr for ParticlePerms {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = new_span(s);
@@ -584,13 +583,13 @@ impl Into<AccessGrant> for IndexedAccessGrant {
 }
 
 pub trait AccessProvider: Send + Sync {
-    fn access(&self, to: &Agent, on: &Point) -> anyhow::Result<Access>;
+    fn access(&self, to: &Agent, on: &Point) -> err::Result<Access>;
 }
 
 pub struct AllAccessProvider();
 
 impl AccessProvider for AllAccessProvider {
-    fn access(&self, _: &Agent, _: &Point) -> anyhow::Result<Access> {
+    fn access(&self, _: &Agent, _: &Point) -> err::Result<Access> {
         Ok(Access::SuperOwner)
     }
 }

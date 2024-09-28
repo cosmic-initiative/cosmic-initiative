@@ -1,11 +1,13 @@
-use core::str::FromStr;
 use anyhow::anyhow;
 use convert_case::{Case, Casing};
+use core::str::FromStr;
 use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 
 use starlane_parse::new_span;
 
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::hyper::ChildRegistry;
 use crate::space::loc::{
     ProvisionAffinity, StarKey, ToBaseKind, Version, CONTROL_WAVE_TRAVERSAL_PLAN,
@@ -19,7 +21,7 @@ use crate::space::selector::{
     KindSelector, Pattern, SpecificSelector, SubKindSelector, VersionReq,
 };
 use crate::space::util::ValuePattern;
-use crate::{KindTemplate, SpaceErr};
+use crate::KindTemplate;
 
 impl ToBaseKind for KindParts {
     fn to_base(&self) -> BaseKind {
@@ -84,7 +86,7 @@ impl ToString for KindParts {
 }
 
 impl FromStr for KindParts {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (_, kind) = all_consuming(kind_parts)(new_span(s))?;
@@ -220,7 +222,7 @@ impl ToBaseKind for BaseKind {
 }
 
 impl TryFrom<CamelCase> for BaseKind {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(base: CamelCase) -> Result<Self, Self::Error> {
         Ok(BaseKind::from_str(base.as_str())?)
@@ -368,19 +370,19 @@ impl Kind {
 }
 
 impl TryFrom<KindParts> for Kind {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(value: KindParts) -> Result<Self, Self::Error> {
         Ok(match value.base {
             BaseKind::Database => {
-                match value.sub.ok_or(anyhow!("Database<?> requires a Sub Kind"))?.as_str() {
+                match value.sub.ok_or(err!("Database<?> requires a Sub Kind"))?.as_str() {
                     "Relational" => Kind::Database(DatabaseSubKind::Relational(
                         value
                             .specific
-                            .ok_or(anyhow!("Database<Relational<?>> requires a Specific"))?,
+                            .ok_or(err!("Database<Relational<?>> requires a Specific"))?,
                     )),
                     what => {
-                        return Err(anyhow!(
+                        return Err(err!(
                             "unexpected Database SubKind '{}'",
                             what
                         ));
@@ -388,14 +390,14 @@ impl TryFrom<KindParts> for Kind {
                 }
             }
             BaseKind::UserBase => {
-                match value.sub.ok_or(anyhow!("UserBase<?> requires a Sub Kind"))?.as_str() {
+                match value.sub.ok_or(err!("UserBase<?> requires a Sub Kind"))?.as_str() {
                     "OAuth" => Kind::UserBase(UserBaseSubKind::OAuth(
                         value
                             .specific
-                            .ok_or(anyhow!("UserBase<OAuth<?>> requires a Specific"))?,
+                            .ok_or(err!("UserBase<OAuth<?>> requires a Specific"))?,
                     )),
                     what => {
-                        return Err(anyhow!(
+                        return Err(err!(
                             "unexpected Database SubKind '{}'",
                             what
                         ));
@@ -404,17 +406,17 @@ impl TryFrom<KindParts> for Kind {
             }
             BaseKind::Base => Kind::Base,
             BaseKind::File => Kind::File(FileSubKind::from_str(
-                value.sub.ok_or("File<?> requires a Sub Kind")?.as_str(),
+                value.sub.ok_or(err!("File<?> requires a Sub Kind"))?.as_str(),
             )?),
             BaseKind::Artifact => Kind::Artifact(ArtifactSubKind::from_str(
-                value.sub.ok_or("Artifact<?> requires a sub kind")?.as_str(),
+                value.sub.ok_or(anyhow!("Artifact<?> requires a sub kind"))?.as_str(),
             )?),
 
             BaseKind::Star => Kind::Star(StarSub::from_str(
-                value.sub.ok_or("Star<?> requires a sub kind")?.as_str(),
+                value.sub.ok_or(anyhow!("Star<?> requires a sub kind"))?.as_str(),
             )?),
             BaseKind::Native => Kind::Native(NativeSub::from_str(
-                value.sub.ok_or("Native<?> requires a sub kind")?.as_str(),
+                value.sub.ok_or(anyhow!("Native<?> requires a sub kind"))?.as_str(),
             )?),
 
             BaseKind::Root => Kind::Root,
@@ -752,7 +754,7 @@ impl ToString for Specific {
 }
 
 impl FromStr for Specific {
-    type Err = SpaceErr;
+    type Err = err::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         result(specific(new_span(s)))
@@ -760,7 +762,7 @@ impl FromStr for Specific {
 }
 
 impl TryInto<SpecificSelector> for Specific {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_into(self) -> Result<SpecificSelector, Self::Error> {
         Ok(SpecificSelector {
@@ -775,12 +777,13 @@ impl TryInto<SpecificSelector> for Specific {
 
 #[cfg(test)]
 pub mod test {
+    use crate::space::err;
+    use crate::space::kind::{Kind, StarSub};
     use crate::space::selector::KindSelector;
-    use crate::{Kind, SpaceErr, StarSub};
     use core::str::FromStr;
 
     #[test]
-    pub fn selector() -> anyhow::Result<()> {
+    pub fn selector() -> err::Result<()> {
         let kind = Kind::Star(StarSub::Fold);
         let selector = KindSelector::from_str("<Star<Fold>>")?;
         assert!(selector.matches(&kind));

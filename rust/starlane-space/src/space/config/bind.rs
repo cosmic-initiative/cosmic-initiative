@@ -1,9 +1,9 @@
-use std::convert::TryInto;
 use anyhow::anyhow;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
-use crate::space::err::SpaceErr;
+use crate::space::err::Error;
 use crate::space::loc::Topic;
 use crate::space::parse::model::{
     BindScope, MethodScope, PipelineSegmentDef, RouteScope,
@@ -43,7 +43,7 @@ impl BindConfig {
         scopes
     }
 
-    pub fn select(&self, directed: &DirectedWave) -> anyhow::Result<&MethodScope> {
+    pub fn select(&self, directed: &DirectedWave) -> err::Result<&MethodScope> {
         for route_scope in self.route_scopes() {
             if route_scope.selector.is_match(directed).is_ok() {
                 for message_scope in &route_scope.block {
@@ -57,7 +57,7 @@ impl BindConfig {
                 }
             }
         }
-        Err(anyhow!(
+        Err(err!(
                 "no route matches {}<{}>{}",
                 directed.kind().to_string(),
                 directed.core().method.to_string(),
@@ -69,7 +69,7 @@ impl BindConfig {
 impl TryFrom<Vec<u8>> for BindConfig {
     type Error = anyhow::Error;
 
-    fn try_from(doc: Vec<u8>) -> anyhow::Result<Self> {
+    fn try_from(doc: Vec<u8>) -> err::Result<Self> {
         let doc = String::from_utf8(doc)?;
         bind_config(doc.as_str())
     }
@@ -144,7 +144,7 @@ impl<Pnt> PipelineStepDef<Pnt> {
 }
 
 impl ToResolved<PipelineStep> for PipelineStepCtx {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStep> {
+    fn to_resolved(self, env: &Env) -> err::Result<PipelineStep> {
         let mut blocks = vec![];
         for block in self.blocks {
             blocks.push(block.to_resolved(env)?);
@@ -159,7 +159,7 @@ impl ToResolved<PipelineStep> for PipelineStepCtx {
 }
 
 impl ToResolved<PipelineStepCtx> for PipelineStepVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStepCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<PipelineStepCtx> {
         let mut blocks = vec![];
         for block in self.blocks {
             blocks.push(block.to_resolved(env)?);
@@ -199,14 +199,14 @@ pub enum PipelineStopDef<Pnt> {
 }
 
 impl ToResolved<PipelineStop> for PipelineStopVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStop> {
+    fn to_resolved(self, env: &Env) -> err::Result<PipelineStop> {
         let stop: PipelineStopCtx = self.to_resolved(env)?;
         stop.to_resolved(env)
     }
 }
 
 impl ToResolved<PipelineStop> for PipelineStopCtx {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStop> {
+    fn to_resolved(self, env: &Env) -> err::Result<PipelineStop> {
         Ok(match self {
             PipelineStopCtx::Core => PipelineStop::Core,
             PipelineStopCtx::Call(call) => PipelineStop::Call(call.to_resolved(env)?),
@@ -218,7 +218,7 @@ impl ToResolved<PipelineStop> for PipelineStopCtx {
 }
 
 impl ToResolved<PipelineStopCtx> for PipelineStopVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PipelineStopCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<PipelineStopCtx> {
         Ok(match self {
             PipelineStopVar::Core => PipelineStopCtx::Core,
             PipelineStopVar::Call(call) => PipelineStopCtx::Call(call.to_resolved(env)?),

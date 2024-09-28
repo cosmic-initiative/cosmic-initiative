@@ -1,32 +1,21 @@
 use core::fmt::Pointer;
-use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter};
-use std::num::ParseIntError;
 use std::ops::Range;
 use std::string::FromUtf8Error;
-use std::sync::{Arc, PoisonError};
-
-use nom::error::VerboseError;
-use nom::Err;
-use nom_supreme::error::ErrorTree;
-use serde::de::Error;
-use tokio::sync::mpsc::error::{SendError, SendTimeoutError};
-use tokio::sync::oneshot::error::RecvError;
-use tokio::time::error::Elapsed;
+use std::sync::Arc;
 
 use crate::space::err::report::{Label, Report, ReportKind};
 use starlane_parse::Span;
 use starlane_parse::SpanExtra;
 
-use crate::space::parse::error::find_parse_err;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use crate::space::thiserr::ThisErr;
 
 
-pub type AnyhowResult<T> = anyhow::Result<T>;
+pub type Result<T> = anyhow::Result<T>;
+pub use anyhow::anyhow as err;
+pub use anyhow::Error as Error;
 
-#[derive(Error, Debug,strum_macros::Display)]
+#[derive(thiserror::Error, Debug,strum_macros::Display)]
 pub enum SpaceErr {
     Status { status: u16, message: String },
     ParseErrs(#[from]  ParseErrs),
@@ -38,7 +27,7 @@ impl SpaceErr {
 
     pub fn status(&self) -> u16 {
         match self {
-            SpaceErr::Status { status, .. } => status.clone(),
+            Self::Status { status, .. } => status.clone(),
             _ => 500u16,
         }
     }
@@ -49,7 +38,7 @@ impl SpaceErr {
     pub fn not_found<S: ToString>(message: S) -> Self {
         Self::new(404u16,message)
     }
-    pub fn new<S: ToString>( status: u16, message: S) -> SpaceErr {
+    pub fn new<S: ToString>( status: u16, message: S) -> err::Error {
        Self::Status { status: status, message: message.to_string() }
     }
 }
@@ -58,18 +47,18 @@ impl SpaceErr {
 impl<I: Span> From<nom::Err<ErrorTree<I>>> for ParseErrs {
     fn from(err: Err<ErrorTree<I>>) -> Self {
         match find_parse_err(&err) {
-            SpaceErr::Status { .. } => ParseErrs {
+            err::Error::Status { .. } => ParseErrs {
                 report: vec![],
                 source: None,
                 ctx: "".to_string(),
             },
-            SpaceErr::ParseErrs(parse_errs) => parse_errs,
+            err::Error::ParseErrs(parse_errs) => parse_errs,
         }
     }
 }
  */
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Error)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, thiserror::Error)]
 pub struct ParseErrs {
     pub report: Vec<Report>,
     pub source: Option<Arc<String>>,
@@ -116,7 +105,7 @@ impl ParseErrs {
         label: &str,
         range: Range<usize>,
         extra: SpanExtra,
-    ) -> SpaceErr {
+    ) -> err::Error {
         let mut builder = Report::build(ReportKind::Error, (), 23);
         let report = builder
             .with_message(message)
@@ -125,7 +114,7 @@ impl ParseErrs {
         return ParseErrs::from_report(report, extra).into();
     }
 
-    pub fn from_owned_span<I: Span>(message: &str, label: &str, span: I) -> SpaceErr {
+    pub fn from_owned_span<I: Span>(message: &str, label: &str, span: I) -> err::Error {
         let mut builder = Report::build(ReportKind::Error, (), 23);
         let report = builder
             .with_message(message)
@@ -165,8 +154,8 @@ impl ParseErrs {
     }
 }
 
-impl From<SpaceErr> for ParseErrs {
-    fn from(u: SpaceErr) -> Self {
+impl From<err::Error> for ParseErrs {
+    fn from(u: err::Error) -> Self {
         ParseErrs {
             report: vec![],
             source: None,
@@ -175,18 +164,18 @@ impl From<SpaceErr> for ParseErrs {
     }
 }
 
-impl From<serde_urlencoded::de::Error> for SpaceErr {
+impl From<serde_urlencoded::de::Error> for err::Error {
     fn from(err: serde_urlencoded::de::Error) -> Self {
-        SpaceErr::Status {
+        err::Error::Status {
             status: 500u16,
             message: err.to_string(),
         }
     }
 }
 
-impl From<serde_urlencoded::ser::Error> for SpaceErr {
+impl From<serde_urlencoded::ser::Error> for err::Error {
     fn from(err: serde_urlencoded::ser::Error) -> Self {
-        SpaceErr::Status {
+        err::Error::Status {
             status: 500u16,
             message: err.to_string(),
         }

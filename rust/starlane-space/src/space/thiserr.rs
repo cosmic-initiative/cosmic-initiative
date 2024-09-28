@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use crate::space::err::{ParseErrs, SpaceErr};
+use crate::space::err::{ParseErrs};
 use crate::space::substance::Substance;
-use crate::space::thiserr;
 use crate::space::wave::core::http2::StatusCode;
 use crate::space::wave::core::{CoreReflector, ReflectedCore};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 #[derive(Debug, Clone, Serialize, Deserialize,Error,Display)]
 pub enum ThisErr {
     String(#[from] String),
@@ -19,10 +18,10 @@ pub fn err<I,O>( e: I ) -> ThisErr where I:ToString, O: std::error::Error {
 }
 
 impl ThisErr {
-    pub fn new( status: u16, message: String ) -> Self {
+    pub fn new<T: ToString>( status: u16, message: T) -> Self {
         Self::Status {
             status,
-            message
+            message: message.to_string()
         }
     }
 }

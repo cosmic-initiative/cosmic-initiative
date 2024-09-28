@@ -7,13 +7,14 @@ use serde::{Deserialize, Serialize};
 
 use starlane_parse::{new_span, Res, Span};
 
+use crate::space::err;
 use crate::space::kind::{Kind, KindParts};
 use crate::space::parse::error::result;
 use crate::space::parse::{parse_alpha1_str, point_and_kind, Env};
 use crate::space::point::{Point, PointCtx, PointVar};
 use crate::space::substance::Substance;
 use crate::space::util::ToResolved;
-use crate::{BaseKind, SpaceErr};
+use crate::BaseKind;
 
 pub mod property;
 pub mod traversal;
@@ -172,9 +173,6 @@ impl Particle2 {
 }
 
 pub mod particle {
-    use nom::Parser;
-    use nom_supreme::ParserExt;
-
     /*
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     pub struct StatusDetails<C>
@@ -240,7 +238,7 @@ pub struct PointKindDef<Pnt> {
 }
 
 impl ToResolved<PointKindCtx> for PointKindVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKindCtx> {
+    fn to_resolved(self, env: &Env) -> err::Result<PointKindCtx> {
         Ok(PointKindCtx {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -249,7 +247,7 @@ impl ToResolved<PointKindCtx> for PointKindVar {
 }
 
 impl ToResolved<PointKind> for PointKindVar {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKind> {
+    fn to_resolved(self, env: &Env) -> err::Result<PointKind> {
         Ok(PointKind {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -258,7 +256,7 @@ impl ToResolved<PointKind> for PointKindVar {
 }
 
 impl ToResolved<PointKind> for PointKindCtx {
-    fn to_resolved(self, env: &Env) -> anyhow::Result<PointKind> {
+    fn to_resolved(self, env: &Env) -> err::Result<PointKind> {
         Ok(PointKind {
             point: self.point.to_resolved(env)?,
             kind: self.kind,
@@ -279,7 +277,7 @@ impl ToString for PointKind {
 }
 
 impl FromStr for PointKind {
-    type Err = SpaceErr;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let point_and_kind: PointKindVar = result(all_consuming(point_and_kind)(new_span(s)))?;

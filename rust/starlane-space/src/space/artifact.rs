@@ -1,12 +1,12 @@
-use core::borrow::Borrow;
-use std::ops::Deref;
-use std::sync::Arc;
-use nom_supreme::final_parser::ExtractContext;
-use serde::{Deserialize, Serialize};
-
+use crate::space::err;
 use crate::space::loc::ToSurface;
 use crate::space::point::Point;
 use crate::space::substance::Bin;
+use core::borrow::Borrow;
+use nom_supreme::final_parser::ExtractContext;
+use serde::{Deserialize, Serialize};
+use std::ops::Deref;
+use std::sync::Arc;
 
 pub mod asynch;
 pub mod synch;
@@ -33,7 +33,7 @@ where
 }
 
 impl<A> ArtRef<A> {
-    pub fn bundle(&self) -> anyhow::Result<Point> {
+    pub fn bundle(&self) -> err::Result<Point> {
         self.point.clone().to_bundle()
     }
     pub fn point(&self) -> &Point {

@@ -1,4 +1,3 @@
-use crate::space::err::SpaceErr;
 use crate::space::loc::Version;
 use crate::space::parse::{CamelCase, Domain, SkewerCase};
 use crate::space::selector::VersionReq;
@@ -85,7 +84,7 @@ pub enum Variant {
 }
 
 impl Variant {
-    pub fn from(kind: &Kind, variant: &CamelCase) -> anyhow::Result<Self> {
+    pub fn from(kind: &Kind, variant: &CamelCase) -> err::Result<Self> {
         match kind {
             what => Err(format!(
                 "kind '{}' does not have a variant '{}' ",

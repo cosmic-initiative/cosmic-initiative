@@ -1,9 +1,9 @@
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::parse::mechtron_config;
 use crate::space::parse::model::MechtronScope;
 use crate::space::point::Point;
-use crate::SpaceErr;
 use core::str::FromStr;
-use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -13,7 +13,7 @@ pub struct MechtronConfig {
 }
 
 impl MechtronConfig {
-    pub fn new(scopes: Vec<MechtronScope>) -> anyhow::Result<Self> {
+    pub fn new(scopes: Vec<MechtronScope>) -> err::Result<Self> {
         let mut wasm = None;
         let mut name = None;
         for scope in scopes {
@@ -35,7 +35,7 @@ impl MechtronConfig {
                 name: name.unwrap(),
             })
         } else {
-            Err(anyhow!("required `bin` and `name` in Wasm scope"))
+            Err(err!("required `bin` and `name` in Wasm scope"))
         }
     }
 }
@@ -43,7 +43,7 @@ impl MechtronConfig {
 impl TryFrom<Vec<u8>> for MechtronConfig {
     type Error = anyhow::Error;
 
-    fn try_from(doc: Vec<u8>) -> anyhow::Result<Self> {
+    fn try_from(doc: Vec<u8>) -> err::Result<Self> {
         let doc = String::from_utf8(doc)?;
         mechtron_config(doc.as_str())
     }

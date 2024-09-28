@@ -7,7 +7,8 @@ use starlane_primitive_macros::Autobox;
 
 use crate::space::command::common::StateSrc;
 use crate::space::config::mechtron::MechtronConfig;
-use crate::space::err::SpaceErr;
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::kind::{Kind, KindParts, StarSub};
 use crate::space::loc::{StarKey, Surface, ToSurface};
 use crate::space::log::Log;
@@ -18,7 +19,7 @@ use crate::space::substance::Substance;
 use crate::space::wave::core::hyp::HypMethod;
 use crate::space::wave::core::{DirectedCore, ReflectedCore};
 use crate::space::wave::{
-    PingCore, ReflectedKind, ReflectedProto, Wave, WaveVariantDef, WaveId, WaveKind,
+    PingCore, ReflectedKind, ReflectedProto, Wave, WaveId, WaveKind, WaveVariantDef,
 };
 use crate::Agent;
 
@@ -56,7 +57,7 @@ impl Location {
         Location::Somewhere(point)
     }
 
-    pub fn ok_or(&self) -> anyhow::Result<Point> {
+    pub fn ok_or(&self) -> err::Result<Point> {
         match self {
             Location::Nowhere => Err("Particle is presently nowhere".into()),
             Location::Somewhere(point) => Ok(point.clone()),
@@ -142,15 +143,13 @@ impl Provision {
 }
 
 impl TryFrom<PingCore> for Provision {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(request: PingCore) -> Result<Self, Self::Error> {
         if let Substance::Hyper(HyperSubstance::Provision(provision)) = request.core.body {
             Ok(provision)
         } else {
-            Err(SpaceErr::bad_request(
-                "expecting a Provision HyperSubstance",
-            ))
+            Err(err!( "expecting a Provision HyperSubstance" ))
         }
     }
 }
@@ -290,13 +289,13 @@ impl DerefMut for Discoveries {
 }
 
 impl TryFrom<PingCore> for Assign {
-    type Error = SpaceErr;
+    type Error = err::Error;
 
     fn try_from(request: PingCore) -> Result<Self, Self::Error> {
         if let Substance::Hyper(HyperSubstance::Assign(assign)) = request.core.body {
             Ok(assign)
         } else {
-            Err(SpaceErr::bad_request("expecting an Assign HyperSubstance"))
+            Err(err!("expecting an Assign HyperSubstance"))
         }
     }
 }

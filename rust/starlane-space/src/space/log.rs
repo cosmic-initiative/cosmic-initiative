@@ -8,7 +8,6 @@ use serde;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::space::err::SpaceErr;
 use crate::space::loc::{Layer, ToPoint, ToSurface, Uuid};
 use crate::space::parse::CamelCase;
 use crate::space::point::Point;
@@ -610,7 +609,7 @@ impl PointLogger {
         }
     }
 
-    pub fn push_point<S: ToString>(&self, segs: S) -> anyhow::Result<PointLogger> {
+    pub fn push_point<S: ToString>(&self, segs: S) -> err::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.push(segs)?,
@@ -628,7 +627,7 @@ impl PointLogger {
         }
     }
 
-    pub fn push_mark<S: ToString>(&self, segs: S) -> anyhow::Result<PointLogger> {
+    pub fn push_mark<S: ToString>(&self, segs: S) -> err::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.clone(),
@@ -637,7 +636,7 @@ impl PointLogger {
         })
     }
 
-    pub fn push_action<A: ToString>(&self, action: A) -> anyhow::Result<PointLogger> {
+    pub fn push_action<A: ToString>(&self, action: A) -> err::Result<PointLogger> {
         Ok(PointLogger {
             logger: self.logger.clone(),
             point: self.point.clone(),
@@ -1176,7 +1175,7 @@ pub struct TrackDef<R> {
 }
 
 impl TrackRegex {
-    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> anyhow::Result<Self> {
+    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> err::Result<Self> {
         let selector = Selector::from_str(selector.to_string().as_str())?;
         let stop = Regex::from_str(stop.to_string().as_str())?;
         let action = Regex::from_str(action.to_string().as_str())?;
@@ -1190,7 +1189,7 @@ impl TrackRegex {
 }
 
 impl TrackDef<String> {
-    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> anyhow::Result<Self> {
+    pub fn new<S: ToString>(selector: S, stop: S, action: S) -> err::Result<Self> {
         let selector = Selector::from_str(selector.to_string().as_str())?;
         Regex::from_str(stop.to_string().as_str())?;
         Regex::from_str(action.to_string().as_str())?;
@@ -1205,7 +1204,7 @@ impl TrackDef<String> {
         })
     }
 
-    pub fn to_regex(&self) -> anyhow::Result<TrackRegex> {
+    pub fn to_regex(&self) -> err::Result<TrackRegex> {
         Ok(TrackRegex {
             selector: self.selector.clone(),
             stop: Regex::from_str(self.stop.as_str())?,

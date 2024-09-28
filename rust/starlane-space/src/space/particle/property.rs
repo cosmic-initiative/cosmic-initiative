@@ -1,13 +1,14 @@
 use core::str::FromStr;
 use std::collections::HashMap;
 use std::ops::Deref;
-use anyhow::anyhow;
 use validator::validate_email;
 
 use crate::space::command::common::PropertyMod;
+use crate::space::err;
+use crate::space::err::err;
 use crate::space::parse::SkewerCase;
 use crate::space::point::Point;
-use crate::{Kind, SetProperties, SpaceErr};
+use crate::{Kind, SetProperties};
 
 pub struct PropertyDef {
     pub pattern: Box<dyn PropertyPattern>,
@@ -28,22 +29,21 @@ impl PropertyDef {
         default: Option<String>,
         constant: bool,
         permits: Vec<PropertyPermit>,
-    ) -> Result<Self, SpaceErr> {
+    ) -> err::Result<Self> {
         if constant {
             default
                 .as_ref()
-                .ok_or("if PropertyDef is a constant then 'default' value must be set")?;
+                .ok_or(err!("if PropertyDef is a constant then 'default' value must be set"))?;
         }
 
         if let Some(value) = default.as_ref() {
             match pattern.is_match(value) {
                 Ok(_) => {}
                 Err(err) => {
-                    return Err(format!(
-                        "default value does not match pattern: {}",
-                        err.to_string()
+                    return Err(err!(
+                        "default value does not match pattern: "
                     )
-                    .into());
+                    );
                 }
             }
         }
@@ -61,14 +61,14 @@ impl PropertyDef {
 }
 
 pub trait PropertyPattern: Send + Sync + 'static {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr>;
+    fn is_match(&self, value: &String) -> Result<(),()>;
 }
 
 #[derive(Clone)]
 pub struct AnythingPattern {}
 
 impl PropertyPattern for AnythingPattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
+    fn is_match(&self, value: &String) -> Result<(),()> {
         Ok(())
     }
 }
@@ -77,9 +77,9 @@ impl PropertyPattern for AnythingPattern {
 pub struct PointPattern {}
 
 impl PropertyPattern for PointPattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
+    fn is_match(&self, value: &String) -> Result<(),()> {
         use std::str::FromStr;
-        Point::from_str(value.as_str())?;
+        Point::from_str(value.as_str()).map_err(|_| ());
         Ok(())
     }
 }
@@ -88,11 +88,11 @@ impl PropertyPattern for PointPattern {
 pub struct U64Pattern {}
 
 impl PropertyPattern for U64Pattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
+    fn is_match(&self, value: &String) -> Result<(),()> {
         use std::str::FromStr;
         match u64::from_str(value.as_str()) {
             Ok(_) => Ok(()),
-            Err(err) => Err(err.to_string().into()),
+            Err(err) => Err(()),
         }
     }
 }
@@ -101,11 +101,11 @@ impl PropertyPattern for U64Pattern {
 pub struct BoolPattern {}
 
 impl PropertyPattern for BoolPattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
+    fn is_match(&self, value: &String) -> Result<(),()> {
         use std::str::FromStr;
         match bool::from_str(value.as_str()) {
             Ok(_) => Ok(()),
-            Err(err) => Err(err.to_string().into()),
+            Err(err) => Err(()),
         }
     }
 }
@@ -114,8 +114,8 @@ impl PropertyPattern for BoolPattern {
 pub struct UsernamePattern {}
 
 impl PropertyPattern for UsernamePattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
-        SkewerCase::from_str(value.as_str())?;
+    fn is_match(&self, value: &String) -> Result<(),()> {
+        SkewerCase::from_str(value.as_str()).map_err(|_| ())?;
         Ok(())
     }
 }
@@ -124,9 +124,9 @@ impl PropertyPattern for UsernamePattern {
 pub struct EmailPattern {}
 
 impl PropertyPattern for EmailPattern {
-    fn is_match(&self, value: &String) -> Result<(), SpaceErr> {
+    fn is_match(&self, value: &String) -> Result<(),()> {
         if !validate_email(value) {
-            Err(format!("not a valid email: '{}'", value).into())
+            Err(())
         } else {
             Ok(())
         }
@@ -189,20 +189,20 @@ impl PropertiesConfig {
         rtn
     }
 
-    pub fn check_create(&self, set: &SetProperties) -> Result<(), SpaceErr> {
+    pub fn check_create(&self, set: &SetProperties) -> err::Result<()> {
         for req in self.required() {
             if !set.contains_key(&req) {
-                return Err(format!(
+                return Err(err!(
                     "{} missing required property: '{}'",
                     self.kind.to_string(),
                     req
                 )
-                .into());
+                );
             }
         }
 
         for (key, propmod) in &set.map {
-            let def = self.get(key).ok_or(format!(
+            let def = self.get(key).ok_or(err!(
                 "{} illegal property: '{}'",
                 self.kind.to_string(),
                 key
@@ -210,56 +210,56 @@ impl PropertiesConfig {
             match propmod {
                 PropertyMod::Set { key, value, lock } => {
                     if def.constant && def.default.as_ref().unwrap().clone() != value.clone() {
-                        return Err(format!(
+                        return Err(err!(
                             "{} property: '{}' is constant and cannot be set",
                             self.kind.to_string(),
                             key
                         )
                         .into());
                     }
-                    def.pattern.is_match(value)?;
+                    def.pattern.is_match(value).map_err(|_|err!("could not match"))?;
                     match def.source {
                         PropertySource::CoreReadOnly => {
-                            return Err(format!("{} property '{}' is flagged CoreReadOnly and cannot be set within the Mesh",self.kind.to_string(), key).into());
+                            return Err(err!("{} property '{}' is flagged CoreReadOnly and cannot be set within the Mesh",self.kind.to_string(), key).into());
                         }
                         _ => {}
                     }
                 }
                 PropertyMod::UnSet(_) => {
-                    return Err(format!("cannot unset: '{}' during particle create", key).into());
+                    return Err(err!("cannot unset: '{}' during particle create", key));
                 }
             }
         }
         Ok(())
     }
 
-    pub fn check_update(&self, set: &SetProperties) -> Result<(), SpaceErr> {
+    pub fn check_update(&self, set: &SetProperties) -> err::Result<()> {
         for (key, propmod) in &set.map {
             let def = self
                 .get(key)
-                .ok_or(format!("illegal property: '{}'", key))?;
+                .ok_or(err!("illegal property: '{}'", key))?;
             match propmod {
                 PropertyMod::Set { key, value, lock } => {
                     if def.constant {
                         return Err(
-                            format!("property: '{}' is constant and cannot be set", key).into()
+                            err!("property: '{}' is constant and cannot be set", key).into()
                         );
                     }
-                    def.pattern.is_match(value)?;
+                    def.pattern.is_match(value).map_err(|_|err!("could not match"))?;
                     match def.source {
                         PropertySource::CoreReadOnly => {
-                            return Err(format!("property '{}' is flagged CoreReadOnly and cannot be set within the Mesh",key).into());
+                            return Err(err!("property '{}' is flagged CoreReadOnly and cannot be set within the Mesh",key).into());
                         }
                         _ => {}
                     }
                 }
                 PropertyMod::UnSet(_) => {
                     if !def.mutable {
-                        return Err(format!("property '{}' is immutable and cannot be changed after particle creation",key).into());
+                        return Err(err!("property '{}' is immutable and cannot be changed after particle creation",key).into());
                     }
                     if def.required {
                         return Err(
-                            format!("property '{}' is required and cannot be unset", key).into(),
+                            err!("property '{}' is required and cannot be unset", key).into(),
                         );
                     }
                 }
@@ -268,14 +268,14 @@ impl PropertiesConfig {
         Ok(())
     }
 
-    pub fn check_read(&self, keys: &Vec<String>) -> Result<(), SpaceErr> {
+    pub fn check_read(&self, keys: &Vec<String>) -> err::Result<()> {
         for key in keys {
             let def = self
                 .get(key)
-                .ok_or(format!("illegal property: '{}'", key))?;
+                .ok_or(err!("illegal property: '{}'", key))?;
             match def.source {
                 PropertySource::CoreSecret => {
-                    return Err(format!(
+                    return Err(err!(
                         "property '{}' is flagged CoreSecret and cannot be read within the Mesh",
                         key
                     )
@@ -287,18 +287,18 @@ impl PropertiesConfig {
         Ok(())
     }
 
-    pub fn fill_create_defaults(&self, set: &SetProperties) -> Result<SetProperties, SpaceErr> {
+    pub fn fill_create_defaults(&self, set: &SetProperties) -> err::Result<SetProperties> {
         let mut rtn = set.clone();
         let defaults = self.defaults();
         for d in defaults {
             if !rtn.contains_key(&d) {
                 let def = self
                     .get(&d)
-                    .ok_or(format!("expected default property def: {}", &d))?;
+                    .ok_or(err!("expected default property def: {}", &d))?;
                 let value = def
                     .default
                     .as_ref()
-                    .ok_or(format!("expected default property def: {}", &d))?
+                    .ok_or(err!("expected default property def: {}", &d))?
                     .clone();
                 rtn.push(PropertyMod::Set {
                     key: d,
@@ -331,9 +331,9 @@ impl PropertiesConfigBuilder {
         rtn
     }
 
-    pub fn build(self) -> anyhow::Result<PropertiesConfig> {
+    pub fn build(self) -> err::Result<PropertiesConfig> {
         Ok(PropertiesConfig {
-            kind: self.kind.ok_or(anyhow!("kind must be set before PropertiesConfig can be built") )?,
+            kind: self.kind.ok_or(err!("kind must be set before PropertiesConfig can be built") )?,
             properties: self.properties,
         })
     }
@@ -352,7 +352,7 @@ impl PropertiesConfigBuilder {
         default: Option<String>,
         constant: bool,
         permits: Vec<PropertyPermit>,
-    ) -> Result<(), SpaceErr> {
+    ) -> err::Result<()> {
         let def = PropertyDef::new(
             pattern, required, mutable, source, default, constant, permits,
         )?;
@@ -360,7 +360,7 @@ impl PropertiesConfigBuilder {
         Ok(())
     }
 
-    pub fn add_string(&mut self, name: &str) -> Result<(), SpaceErr> {
+    pub fn add_string(&mut self, name: &str) -> err::Result<()> {
         let def = PropertyDef::new(
             Box::new(AnythingPattern {}),
             false,
@@ -374,7 +374,7 @@ impl PropertiesConfigBuilder {
         Ok(())
     }
 
-    pub fn add_point(&mut self, name: &str, required: bool, mutable: bool) -> Result<(), SpaceErr> {
+    pub fn add_point(&mut self, name: &str, required: bool, mutable: bool) -> err::Result<()> {
         let def = PropertyDef::new(
             Box::new(PointPattern {}),
             required,
