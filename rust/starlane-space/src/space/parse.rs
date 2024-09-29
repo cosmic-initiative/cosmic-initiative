@@ -23,10 +23,9 @@ use nom::combinator::{cut, eof, fail, not, peek, recognize, value, verify};
 use nom::error::{context, ContextError, ErrorKind, ParseError};
 use nom::multi::{many0, many1, separated_list0};
 use nom::sequence::{delimited, pair, preceded, terminated, tuple};
-use nom::{
-    AsChar, Compare, FindToken, InputIter, InputLength, InputTake, InputTakeAtPosition, Offset,
-    Parser, Slice,
-};
+use nom::{AsChar, Compare, FindToken, InputIter, InputLength, InputTake, InputTakeAtPosition, Offset, Parser, Slice};
+
+use nom_supreme::ParserExt;
 use nom::{Err, IResult};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::ExtractContext;
@@ -100,6 +99,10 @@ use crate::space::wave::core::hyp::HypMethod;
 use crate::space::wave::core::MethodKind;
 use crate::space::wave::core::{Method, MethodPattern};
 
+pub enum MyErr {
+
+}
+
 /*
 pub struct Parser {}
 
@@ -114,6 +117,7 @@ impl Parser {
     }
 }
  */
+
 
 fn any_resource_path_segment<T>(i: T) -> Res<T, T>
 where
@@ -347,7 +351,7 @@ pub fn point_var<I: Span>(input: I) -> Res<I, PointVar> {
 }
 
 /*
-pub fn var<O,F,P>(mut f: F ) -> impl FnMut(I) -> Res<I,Var<O,P>> where F: Parser<I,O,ErrorTree<I>>, P: VarParser<O> {
+pub fn var<O,F,P>(mut f: F ) -> impl FnMut(I) -> Res<I,Var<O,P>> where F: ParserExt<I,O,ErrorTree<I>>, P: VarParser<O> {
     move | input: I | {
         let result = recognize(pair(peek(tag("$")),context("var",cut(delimited(tag("${"), skewer_case, tag("}") )))))(input.clone());
         match result {
@@ -401,7 +405,7 @@ fn var<I: Span, O>(input: I) -> Res<I, VarVal<O>> {
 
 pub fn var_seg<F, I: Span>(mut f: F) -> impl FnMut(I) -> Res<I, PointSegVar> + Copy
 where
-    F: Parser<I, PointSegCtx, ErrorTree<I>> + Copy,
+    F: ParserExt<I, PointSegCtx, ErrorTree<I>> + Copy,
 {
     move |input: I| {
         let offset = input.location_offset();
@@ -437,7 +441,7 @@ where
 
 pub fn var_route<'a, F, I: Span>(mut f: F) -> impl FnMut(I) -> Res<I, RouteSegVar>
 where
-    F: Parser<I, RouteSeg, ErrorTree<I>>,
+    F: ParserExt<I, RouteSeg, ErrorTree<I>>,
 {
     move |input: I| {
         let offset = input.location_offset();
@@ -2299,7 +2303,7 @@ where
         + InputTakeAtPosition,
     <I as InputTakeAtPosition>::Item: AsChar,
     I: ToString,
-    F: nom::Parser<I, O, E>,
+    F: nom_supreme::ParserExt<I, O, E>,
     E: nom::error::ContextError<I>,
     O: Clone,
 {
@@ -2309,7 +2313,7 @@ where
     }
 }
 
-pub trait SubstParser<T: Sized> {
+pub trait SubstParserExt<T: Sized> {
     fn parse_string(&self, string: String) -> Result<T, SpaceErr> {
         let span = new_span(string.as_str());
         let output = result(self.parse_span(span))?;
@@ -2323,7 +2327,7 @@ pub fn root_ctx_seg<I: Span, E: ParseError<I>, F>(
     mut f: F,
 ) -> impl FnMut(I) -> IResult<I, PointSegCtx, E> + Copy
 where
-    F: nom::Parser<I, PointSeg, E> + Copy,
+    F: nom_supreme::ParserExt<I, PointSeg, E> + Copy,
     E: nom::error::ContextError<I>,
 {
     move |input: I| match pair(tag::<&str, I, E>(".."), eos)(input.clone()) {
@@ -2354,7 +2358,7 @@ pub fn working<I: Span, E: ParseError<I>, F>(
     mut f: F,
 ) -> impl FnMut(I) -> IResult<I, PointSegCtx, E>
 where
-    F: nom::Parser<I, PointSeg, E>,
+    F: nom_supreme::ParserExt<I, PointSeg, E>,
     E: nom::error::ContextError<I>,
 {
     move |input: I| match pair(tag::<&str, I, E>("."), eos)(input.clone()) {
@@ -2376,7 +2380,7 @@ pub fn pop<I: Span, E: ParseError<I>, F>(
     mut f: F,
 ) -> impl FnMut(I) -> IResult<I, PointSegCtx, E> + Copy
 where
-    F: nom::Parser<I, PointSeg, E> + Copy,
+    F: nom_supreme::ParserExt<I, PointSeg, E> + Copy,
     E: nom::error::ContextError<I>,
 {
     move |input: I| match pair(tag::<&str, I, E>(".."), eos)(input.clone()) {
@@ -2397,7 +2401,7 @@ where
 pub fn base_seg<I, F, S, E>(mut f: F) -> impl FnMut(I) -> IResult<I, S, E>
 where
     I: Span,
-    F: nom::Parser<I, S, E> + Copy,
+    F: nom_supreme::ParserExt<I, S, E> + Copy,
     E: nom::error::ContextError<I> + nom::error::ParseError<I>,
     S: PointSegment,
 {
@@ -2408,7 +2412,7 @@ pub fn mesh_seg<I: Span, E: ParseError<I>, F, S1, S2>(
     mut f: F,
 ) -> impl FnMut(I) -> IResult<I, S2, E>
 where
-    F: nom::Parser<I, S1, E> + Copy,
+    F: nom_supreme::ParserExt<I, S1, E> + Copy,
     E: nom::error::ContextError<I>,
     S1: PointSegment + Into<S2>,
     S2: PointSegment,
@@ -2500,7 +2504,7 @@ where
         + InputIter
         + InputTakeAtPosition,
     <I as InputTakeAtPosition>::Item: AsChar + Clone,
-    F: nom::Parser<I, O, E> + Clone,
+    F: nom_supreme::ParserExt<I, O, E> + Clone,
     E: nom::error::ContextError<I>,
 {
     alt((
@@ -2528,7 +2532,7 @@ where
         + Clone
         + InputTakeAtPosition,
     <I as InputTakeAtPosition>::Item: AsChar,
-    F: nom::Parser<I, O, E>,
+    F: nom_supreme::ParserExt<I, O, E>,
     E: nom::error::ContextError<I>,
     O: Clone + FromStr<Err = SpaceErr>,
 {
@@ -2540,7 +2544,7 @@ where
 
 pub fn sub<I: Span, O, F>(mut f: F) -> impl FnMut(I) -> Res<I, Spanned<I, O>>
 where
-    F: nom::Parser<I, O, ErrorTree<I>>,
+    F: nom_supreme::ParserExt<I, O, ErrorTree<I>>,
     O: Clone,
 {
     move |input: I| {
@@ -2688,7 +2692,7 @@ where
     I: nom::Slice<std::ops::RangeFrom<usize>>,
     <I as InputIter>::Item: AsChar,
     E: nom::error::ContextError<I> + nom::error::ParseError<I>,
-    F: nom::Parser<I, O, E> + Clone,
+    F: nom_supreme::ParserExt<I, O, E> + Clone,
 {
     move |input: I| {
         f.clone()
@@ -5174,7 +5178,7 @@ pub fn pattern<'r, O, E: ParseError<&'r str>, V>(
     mut value: V,
 ) -> impl FnMut(&'r str) -> IResult<&str, Pattern<O>, E>
 where
-    V: Parser<&'r str, O, E>,
+    V: ParserExt<&'r str, O, E>,
 {
     move |input: &str| {
         let x: Res<Span, Span> = tag("*")(input);
@@ -5227,7 +5231,7 @@ pub fn pattern<I: Span, O, E: ParseError<I>, V>(
     mut value: V,
 ) -> impl FnMut(I) -> IResult<I, Pattern<O>, E>
 where
-    V: Parser<I, O, E>,
+    V: ParserExt<I, O, E>,
 {
     move |input: I| {
         let x: Res<I, I> = tag("*")(input.clone());
@@ -5248,7 +5252,7 @@ pub fn context<I: Clone, E: ContextError<I>, F, O>(
     mut f: F,
 ) -> impl FnMut(I) -> IResult<I, O, E>
     where
-        F: Parser<I, O, E>,
+        F: ParserExt<I, O, E>,
 {
     move |i: I| match f.parse(i.clone()) {
         Ok(o) => Ok(o),
@@ -5264,7 +5268,7 @@ pub fn value_pattern<I: Span, O, E: ParseError<I>, F>(
 ) -> impl FnMut(I) -> IResult<I, ValuePattern<O>, E>
 where
     I: InputLength + InputTake + Compare<&'static str>,
-    F: Parser<I, O, E>,
+    F: ParserExt<I, O, E>,
     E: nom::error::ContextError<I>,
 {
     move |input: I| match tag::<&'static str, I, E>("*")(input.clone()) {
@@ -5278,7 +5282,7 @@ where
 pub fn value_pattern<E,F,O>(
     mut f: F
 ) -> impl Fn(&str) -> IResult<&str, ValuePattern<O>, E>
-where F: Parser<&'static str,O,E>, E: ContextError<&'static str> {
+where F: ParserExt<&'static str,O,E>, E: ContextError<&'static str> {
     move |input: &str| match tag::<&str,&'static str,ErrorTree<&'static str>>("*")(input) {
         Ok((next, _)) => Ok((next, ValuePattern::Any)),
         Err(err) => {
@@ -5375,7 +5379,7 @@ pub fn specific_version_req<I: Span>(input: I) -> Res<I, VersionReq> {
 
 #[derive(Clone)]
 pub struct SkewerPatternParser();
-impl SubstParser<Pattern<String>> for SkewerPatternParser {
+impl SubstParserExt<Pattern<String>> for SkewerPatternParser {
     fn parse_span<I: Span>(&self, span: I) -> Res<I, Pattern<String>> {
         let (next, pattern) = rec_skewer_pattern(span)?;
         let pattern = pattern.to_string_version();
@@ -5385,7 +5389,7 @@ impl SubstParser<Pattern<String>> for SkewerPatternParser {
 
 #[derive(Clone)]
 pub struct DomainPatternParser();
-impl SubstParser<Pattern<String>> for DomainPatternParser {
+impl SubstParserExt<Pattern<String>> for DomainPatternParser {
     fn parse_span<I: Span>(&self, span: I) -> Res<I, Pattern<String>> {
         let (next, pattern) = rec_domain_pattern(span)?;
         let pattern = pattern.to_string_version();
@@ -6260,7 +6264,7 @@ pub fn method_pattern<I: Clone, E: ParseError<I>, F>(
 ) -> impl FnMut(I) -> IResult<I, HttpMethodPattern, E>
 where
     I: InputLength + InputTake + Compare<&'static str>,
-    F: Parser<I, HttpMethod, E>,
+    F: ParserExt<I, HttpMethod, E>,
     E: nom::error::ContextError<I>,
 {
     move |input: I| match tag::<&'static str, I, E>("*")(input.clone()) {
@@ -8323,7 +8327,7 @@ Bind(version=1.2.3)-> {
         /*
         #[derive(Clone)]
         pub struct SomeParser();
-        impl SubstParser<String> for SomeParser {
+        impl SubstParserExt<String> for SomeParser {
             fn parse_span<'a>(&self, span: I) -> Res<I, String> {
                 recognize(terminated(
                     recognize(many0(pair(peek(not(eof)), recognize(anychar)))),

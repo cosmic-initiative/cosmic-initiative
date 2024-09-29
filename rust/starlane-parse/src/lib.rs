@@ -129,10 +129,10 @@ impl<W> Deref for Tw<W> {
     }
 }
 
-pub fn tw<I, F, O>(mut f: F) -> impl FnMut(I) -> Res<I, Tw<O>>
+pub fn tw<I, F, O, E>(mut f: F) -> impl FnMut(I) -> Res<I, Tw<O>, E>
 where
     I: Span,
-    F: FnMut(I) -> Res<I, O>,
+    F: FnMut(I) -> Res<I, O, E>,
 {
     move |input: I| {
         let (next, output) = f(input.clone())?;
@@ -178,9 +178,10 @@ impl Trace {
         }
     }
 
-    pub fn scan<F, I: Span, O>(f: F, input: I) -> Self
+    pub fn scan<F, I: Span, O, E>(f: F, input: I) -> Self
     where
-        F: FnMut(I) -> Res<I, O> + Copy,
+        F: FnMut(I) -> Res<I, O, E> + Copy,
+        E: ParseError<I>,
     {
         let extra = input.extra();
         let range = input.location_offset()..len(f)(input);
@@ -849,20 +850,21 @@ where
     }
 }
 
-pub type Res<I: Span, O> = IResult<I, O, ErrorTree<I>>;
+pub type Res<I: Span, O, E: ParseError<I>> = IResult<I, O, E>;
 
-pub fn wrap<I, F, O>(mut f: F) -> impl FnMut(I) -> Res<I, O>
+pub fn wrap<I, F, O, E>(mut f: F) -> impl FnMut(I) -> Res<I, O, E>
 where
     I: Span,
-    F: FnMut(I) -> Res<I, O> + Copy,
+    F: FnMut(I) -> Res<I, O, E> + Copy,
 {
     move |input: I| f(input)
 }
 
-pub fn len<I, F, O>(f: F) -> impl FnMut(I) -> usize
+pub fn len<I, F, O, E>(f: F) -> impl FnMut(I) -> usize
 where
     I: Span,
-    F: FnMut(I) -> Res<I, O> + Copy,
+    F: FnMut(I) -> Res<I, O, E> + Copy,
+    E: ParseError<I>,
 {
     move |input: I| match recognize(wrap(f))(input) {
         Ok((_, span)) => span.len(),
@@ -870,10 +872,12 @@ where
     }
 }
 
-pub fn trim<I, F, O>(f: F) -> impl FnMut(I) -> Res<I, O>
+pub fn trim<I, F, O, E>(f: F) -> impl FnMut(I) -> Res<I, O, E>
 where
     I: Span,
-    F: FnMut(I) -> Res<I, O> + Copy,
+    F: FnMut(I) -> Res<I, O, E> + Copy,
+    E: ParseError<I>,
 {
     move |input: I| delimited(multispace0, f, multispace0)(input)
 }
+
